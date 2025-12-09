@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: spinmaaser-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: spinmaaser_db
+      POSTGRES_USER: spinmaaser_user
+      POSTGRES_PASSWORD: spinmaaser_password
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spinmaaser_user -d spinmaaser_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  postgres_data:
