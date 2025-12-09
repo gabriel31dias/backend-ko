@@ -1,0 +1,164 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(uuid())
+  name              String
+  email             String   @unique
+  phone             String?
+  password          String
+  operationType     String?  // Infoproduto, Produto Físico, Dropshipping, Serviços, Outros
+  averageTicket     Float?
+  cpf               String?
+  cnpj              String?
+  corporateName     String?
+  salesPageLink     String?
+  // Campos de endereço
+  addressCep        String?
+  addressStreet     String?
+  addressNumber     String?
+  addressComplement String?
+  addressNeighborhood String?
+  addressCity       String?
+  addressState      String?
+  // Campos de documentos
+  documentName      String?
+  documentCpf       String?
+  pfDocumentFrontPath  String?
+  pfDocumentBackPath   String?
+  pfSelfieDocumentPath String?
+  pfBankProofPath      String?
+  legalRepresentativeDocumentFrontPath String?
+  legalRepresentativeDocumentBackPath  String?
+  legalRepresentativeSelfiePath        String?
+  pjBankProofPath    String?
+  cnpjDocumentPath   String?
+  // Campos da carteira
+  walletBalance     Float    @default(0)
+  walletValorReceber Float   @default(0)
+  walletGrossBalance Float   @default(0)
+  walletCurrency    String   @default("BRL")
+  // Chaves da API para pagamentos
+  publicKey         String?
+  secretKey         String?
+  // Token de autenticação para sessão
+  accessToken       String?
+  // Configuração de taxas (null = usar configuração global)
+  fixedFee          Float?   // Taxa fixa específica do usuário
+  percentageFee     Float?   // Taxa percentual específica do usuário
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  // Relacionamentos
+  transactions      Transaction[]
+  walletMovements   WalletMovement[]
+}
+
+model PaymentLink {
+  id               String               @id @default(uuid())
+  title            String
+  description      String?
+  amount           Float
+  currency         String
+  requireEmail     Boolean
+  requirePhone     Boolean
+  allowCustomAmount Boolean
+  maxUses          Int?
+  uses             Int                  @default(0)
+  status           String               @default("active")
+  createdAt        DateTime             @default(now())
+  expiresAt        DateTime?
+  slug             String               @unique
+  shareUrl         String
+  brandColor       String
+  accentColor      String
+  backgroundImage  String?
+  transactions     PaymentTransaction[]
+}
+
+model PaymentTransaction {
+  id            String   @id @default(uuid())
+  paymentMethod String
+  status        String
+  transactionId String   @unique
+  pixCode       String?
+  qrCodeUrl     String?
+  expiresAt     DateTime?
+  issuedAt      DateTime @default(now())
+  linkId        String
+  link          PaymentLink @relation(fields: [linkId], references: [id])
+}
+
+model Transaction {
+  id               String    @id @default(uuid())
+  amount           Float
+  paymentMethod    String    // 'pix' | 'card'
+  status           String    // 'pending' | 'approved' | 'rejected'
+  transactionId    String    @unique
+  description      String?
+  customerName     String
+  customerEmail    String
+  customerPhone    String?
+  customerDocument String?
+  customerType     String    // 'pf' | 'pj'
+  customerTaxId    String    // CPF ou CNPJ
+  // Endereço do cliente
+  customerStreet       String
+  customerNumber       String
+  customerComplement   String?
+  customerNeighborhood String
+  customerCity         String
+  customerState        String
+  customerZipCode      String
+  receiverUserId   String
+  receiver         User      @relation(fields: [receiverUserId], references: [id])
+  createdAt        DateTime  @default(now())
+  approvedAt       DateTime?
+  // PIX específico
+  pixCode          String?
+  pixQrCode        String?
+  pixExpiresAt     DateTime?
+  // Cartão específico
+  authorizationCode String?
+  nsu              String?
+  // Taxas aplicadas
+  grossAmount      Float?    // Valor bruto
+  fixedFeeApplied  Float?    // Taxa fixa aplicada
+  percentageFeeApplied Float? // Taxa percentual aplicada
+  totalFeesApplied Float?    // Total de taxas aplicadas
+  netAmount        Float?    // Valor líquido creditado
+  // Items vendidos
+  items            Json?     // Array de items da transação
+}
+
+model WalletMovement {
+  id               String    @id @default(uuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id])
+  type             String    // 'credit' | 'debit'
+  category         String    // 'transaction_credit' | 'transaction_fee' | 'withdrawal' | 'refund' | 'adjustment'
+  amount           Float     // Valor da movimentação
+  balanceBefore    Float     // Saldo anterior
+  balanceAfter     Float     // Saldo posterior
+  description      String?   // Descrição da movimentação
+  referenceType    String?   // 'transaction' | 'withdrawal' | 'manual'
+  referenceId      String?   // ID da transação ou operação relacionada
+  metadata         Json?     // Dados extras (taxas aplicadas, etc.)
+  createdAt        DateTime  @default(now())
+  
+  @@index([userId, createdAt])
+}
+
+model GlobalSettings {
+  id               String   @id @default(uuid())
+  key              String   @unique // 'global_fixed_fee', 'global_percentage_fee'
+  value            String   // Valor em string para flexibilidade
+  description      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
