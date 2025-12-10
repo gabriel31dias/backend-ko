@@ -9,6 +9,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.PrismaService = void 0;
 const common_1 = require("@nestjs/common");
 const client_1 = require("@prisma/client");
+if (typeof process.loadEnvFile === 'function') {
+    process.loadEnvFile();
+}
 let PrismaService = class PrismaService extends client_1.PrismaClient {
     async onModuleInit() {
         if (this.$connect) {
