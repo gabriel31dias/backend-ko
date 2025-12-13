@@ -20,11 +20,21 @@ let DashboardController = class DashboardController {
     constructor(dashboardService) {
         this.dashboardService = dashboardService;
     }
+    getIndex(user) {
+        return this.dashboardService.getSalesIndex(user.id);
+    }
     getNetRevenue(user) {
         return this.dashboardService.getNetRevenue(user.id);
     }
 };
 exports.DashboardController = DashboardController;
+__decorate([
+    (0, common_1.Get)(),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], DashboardController.prototype, "getIndex", null);
 __decorate([
     (0, common_1.Get)('net-revenue'),
     __param(0, (0, user_decorator_1.CurrentUser)()),
