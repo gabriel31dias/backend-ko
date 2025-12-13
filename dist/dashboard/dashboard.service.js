@@ -16,6 +16,59 @@ let DashboardService = class DashboardService {
     constructor(prisma) {
         this.prisma = prisma;
     }
+    async getSalesIndex(userId) {
+        const now = new Date();
+        const startOfToday = new Date(now);
+        startOfToday.setHours(0, 0, 0, 0);
+        const endOfToday = new Date(startOfToday);
+        endOfToday.setDate(endOfToday.getDate() + 1);
+        const todayTransactions = await this.prisma.transaction.findMany({
+            where: {
+                receiverUserId: userId,
+                status: 'approved',
+                approvedAt: {
+                    gte: startOfToday,
+                    lt: endOfToday,
+                },
+            },
+            select: {
+                amount: true,
+                paymentMethod: true,
+            },
+        });
+        const paymentMethodTotals = new Map();
+        let totalSales = 0;
+        for (const tx of todayTransactions) {
+            const method = tx.paymentMethod;
+            totalSales += tx.amount;
+            if (!paymentMethodTotals.has(method)) {
+                paymentMethodTotals.set(method, { total: 0, count: 0 });
+            }
+            const current = paymentMethodTotals.get(method);
+            current.total += tx.amount;
+            current.count += 1;
+        }
+        const paymentMethods = [];
+        const methods = ['card', 'pix', 'boleto', 'chargeback'];
+        for (const method of methods) {
+            const data = paymentMethodTotals.get(method) || { total: 0, count: 0 };
+            const percentage = totalSales > 0 ? (data.total / totalSales) * 100 : 0;
+            paymentMethods.push({
+                method: method === 'card' ? 'Cartão' :
+                    method === 'pix' ? 'PIX' :
+                        method === 'boleto' ? 'Boleto' :
+                            method === 'chargeback' ? 'Chargeback' : method,
+                total: Number(data.total.toFixed(2)),
+                count: data.count,
+                percentage: Number(percentage.toFixed(2)),
+            });
+        }
+        return {
+            date: startOfToday.toISOString().split('T')[0],
+            totalSales: Number(totalSales.toFixed(2)),
+            paymentMethods,
+        };
+    }
     async getNetRevenue(userId) {
         const now = new Date();
         const startOfToday = new Date(now);
