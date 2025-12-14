@@ -25,7 +25,40 @@ export declare class UsersService {
     findByToken(token: string): Promise<User | undefined>;
     private generatePublicKey;
     private generateSecretKey;
+    private hashPassword;
+    private verifyPassword;
+    private isBcryptHash;
     updateFees(userId: string, updateFeesDto: UpdateFeesDto): Promise<User>;
+    getPendingSellers(page?: number, limit?: number): Promise<{
+        sellers: User[];
+        pagination: {
+            page: number;
+            limit: number;
+            total: number;
+            totalPages: number;
+            hasNext: boolean;
+            hasPrev: boolean;
+        };
+    }>;
+    updateStatus(userId: string, status: string, options?: {
+        notes?: string;
+    }): Promise<User>;
     private toDomain;
+    getUsers(params?: {
+        page?: number;
+        limit?: number;
+        status?: string;
+        search?: string;
+    }): Promise<{
+        users: User[];
+        pagination: {
+            page: number;
+            limit: number;
+            total: number;
+            totalPages: number;
+            hasNext: boolean;
+            hasPrev: boolean;
+        };
+    }>;
 }
 //# sourceMappingURL=users.service.d.ts.map

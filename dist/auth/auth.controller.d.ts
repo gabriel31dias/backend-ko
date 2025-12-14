@@ -9,6 +9,7 @@ export declare class AuthController {
             id: string;
             name: string;
             email: string;
+            status: string;
             wallet: import("../users/user.entity").WalletSnapshot;
             publicKey: string;
             secretKey: string;

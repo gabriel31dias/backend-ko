@@ -22,8 +22,8 @@ let WalletController = class WalletController {
     getWallet(userId) {
         return this.walletService.getWalletSummary(userId);
     }
-    getBalance(userId) {
-        return this.walletService.getBalance(userId);
+    getBalance(userId, from, to) {
+        return this.walletService.getBalance(userId, { from, to });
     }
     getStatement(userId, from, to, limit, category) {
         return this.walletService.getStatement(userId, {
@@ -45,8 +45,10 @@ __decorate([
 __decorate([
     (0, common_1.Get)(':userId/balance'),
     __param(0, (0, common_1.Param)('userId')),
+    __param(1, (0, common_1.Query)('from')),
+    __param(2, (0, common_1.Query)('to')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, String, String]),
     __metadata("design:returntype", void 0)
 ], WalletController.prototype, "getBalance", null);
 __decorate([

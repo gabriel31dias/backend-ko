@@ -31,6 +31,9 @@ const fs_1 = require("fs");
 const path_1 = require("path");
 const create_user_dto_1 = require("./dto/create-user.dto");
 const update_fees_dto_1 = require("./dto/update-fees.dto");
+const update_status_dto_1 = require("./dto/update-status.dto");
+const approval_notes_dto_1 = require("./dto/approval-notes.dto");
+const reject_user_dto_1 = require("./dto/reject-user.dto");
 const users_service_1 = require("./users.service");
 const public_decorator_1 = require("../auth/public.decorator");
 let UsersController = class UsersController {
@@ -44,6 +47,46 @@ let UsersController = class UsersController {
     }
     async updateFees(id, updateFeesDto) {
         const user = await this.usersService.updateFees(id, updateFeesDto);
+        return this.toResponse(user);
+    }
+    async getPendingSellers(page, limit) {
+        const pageNum = parseInt(page || '1');
+        const limitNum = parseInt(limit || '10');
+        const result = await this.usersService.getPendingSellers(pageNum, limitNum);
+        return {
+            sellers: result.sellers.map(user => this.toResponse(user)),
+            pagination: result.pagination,
+        };
+    }
+    async getUsers(page, limit, status, search) {
+        const parsedPage = parseInt(page !== null && page !== void 0 ? page : '1', 10);
+        const parsedLimit = parseInt(limit !== null && limit !== void 0 ? limit : '10', 10);
+        const pageNum = Number.isNaN(parsedPage) ? 1 : Math.max(parsedPage, 1);
+        const limitNum = Number.isNaN(parsedLimit) ? 10 : Math.max(parsedLimit, 1);
+        const result = await this.usersService.getUsers({ page: pageNum, limit: limitNum, status, search });
+        return {
+            users: result.users.map(user => this.toResponse(user)),
+            pagination: result.pagination,
+        };
+    }
+    async getUserById(id) {
+        const user = await this.usersService.findById(id);
+        return this.toResponse(user);
+    }
+    async updateUser(id, updateStatusDto) {
+        const user = await this.usersService.updateStatus(id, updateStatusDto.status, { notes: updateStatusDto.notes });
+        return this.toResponse(user);
+    }
+    async approveUser(id, approvalNotesDto) {
+        const user = await this.usersService.updateStatus(id, 'approved', { notes: approvalNotesDto === null || approvalNotesDto === void 0 ? void 0 : approvalNotesDto.notes });
+        return this.toResponse(user);
+    }
+    async rejectUser(id, rejectUserDto) {
+        const user = await this.usersService.updateStatus(id, 'rejected', { notes: rejectUserDto.notes });
+        return this.toResponse(user);
+    }
+    async updateStatus(id, body) {
+        const user = await this.usersService.updateStatus(id, body.status, { notes: body.notes });
         return this.toResponse(user);
     }
     extractDocumentPaths(files) {
@@ -123,6 +166,63 @@ __decorate([
     __metadata("design:paramtypes", [String, update_fees_dto_1.UpdateFeesDto]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "updateFees", null);
+__decorate([
+    (0, common_1.Get)('sellers/pending'),
+    __param(0, (0, common_1.Query)('page')),
+    __param(1, (0, common_1.Query)('limit')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "getPendingSellers", null);
+__decorate([
+    (0, common_1.Get)(),
+    __param(0, (0, common_1.Query)('page')),
+    __param(1, (0, common_1.Query)('limit')),
+    __param(2, (0, common_1.Query)('status')),
+    __param(3, (0, common_1.Query)('search')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, String, String]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "getUsers", null);
+__decorate([
+    (0, common_1.Get)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "getUserById", null);
+__decorate([
+    (0, common_1.Patch)(':id'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, update_status_dto_1.UpdateStatusDto]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "updateUser", null);
+__decorate([
+    (0, common_1.Patch)(':id/approve'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, approval_notes_dto_1.ApprovalNotesDto]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "approveUser", null);
+__decorate([
+    (0, common_1.Patch)(':id/reject'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, reject_user_dto_1.RejectUserDto]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "rejectUser", null);
+__decorate([
+    (0, common_1.Put)(':id/status'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, update_status_dto_1.UpdateStatusDto]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "updateStatus", null);
 exports.UsersController = UsersController = __decorate([
     (0, common_1.Controller)('users'),
     __metadata("design:paramtypes", [users_service_1.UsersService])

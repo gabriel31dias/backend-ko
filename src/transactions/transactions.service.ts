@@ -4,6 +4,7 @@ import { UsersService } from '../users/users.service';
 import { WalletMovementService } from '../wallet/wallet-movement.service';
 import { SettingsService } from '../settings/settings.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
+import { PaginationQueryDto } from './dto/pagination-query.dto';
 import { Transaction, TransactionResponse } from './entities/transaction.entity';
 import { randomUUID } from 'crypto';
 
@@ -13,6 +14,18 @@ interface FeesResult {
   percentageFeeAmount: number;
   totalFees: number;
   netAmount: number;
+}
+
+export interface PaginatedTransactions {
+  transactions: Transaction[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
 }
 
 @Injectable()
@@ -158,6 +171,10 @@ export class TransactionsService {
     userId: string, 
     adquirenteResponse: MockAdquirenteResponse
   ): Promise<Transaction> {
+    // Calcular data de vencimento (2 dias após criação)
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 2);
+
     const transaction = await this.prisma.transaction.create({
       data: {
         amount: dto.amount,
@@ -216,6 +233,7 @@ export class TransactionsService {
       receiverUserId: transaction.receiverUserId,
       createdAt: transaction.createdAt,
       approvedAt: transaction.approvedAt,
+      expiresAt: transaction.pixExpiresAt,
       pixCode: transaction.pixCode,
       pixQrCode: transaction.pixQrCode,
       pixExpiresAt: transaction.pixExpiresAt,
@@ -339,6 +357,137 @@ export class TransactionsService {
     }
   }
 
+  async getTransactionsPaginated(userId: string, query: PaginationQueryDto): Promise<PaginatedTransactions> {
+    const page = parseInt(query.page || '1');
+    const limit = parseInt(query.limit || '10');
+    const skip = (page - 1) * limit;
+
+    const where: any = { 
+      receiverUserId: userId 
+    };
+
+    if (query.status) {
+      where.status = query.status;
+    }
+
+    if (query.paymentMethod) {
+      where.paymentMethod = query.paymentMethod;
+    }
+
+    if (query.customerName) {
+      where.customerName = {
+        contains: query.customerName,
+        mode: 'insensitive', // Case insensitive
+      };
+    }
+
+    if (query.search) {
+      where.OR = [
+        {
+          customerName: {
+            contains: query.search,
+            mode: 'insensitive',
+          },
+        },
+        {
+          customerEmail: {
+            contains: query.search,
+            mode: 'insensitive',
+          },
+        },
+        {
+          customerTaxId: {
+            contains: query.search,
+            mode: 'insensitive',
+          },
+        },
+        {
+          customerDocument: {
+            contains: query.search,
+            mode: 'insensitive',
+          },
+        },
+      ];
+    }
+
+    if (query.startDate || query.endDate) {
+      where.createdAt = {};
+      if (query.startDate) {
+        // Se não tem horário, adiciona 00:00:00
+        const startDate = query.startDate.includes('T') ? 
+          new Date(query.startDate) : 
+          new Date(query.startDate + 'T00:00:00');
+        where.createdAt.gte = startDate;
+      }
+      if (query.endDate) {
+        // Se não tem horário, adiciona 23:59:59
+        const endDate = query.endDate.includes('T') ? 
+          new Date(query.endDate) : 
+          new Date(query.endDate + 'T23:59:59');
+        where.createdAt.lte = endDate;
+      }
+    }
+
+    const [transactions, total] = await Promise.all([
+      this.prisma.transaction.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.transaction.count({ where }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      transactions: transactions.map(t => ({
+        id: t.id,
+        amount: t.amount,
+        paymentMethod: t.paymentMethod as 'pix' | 'card',
+        status: t.status as 'pending' | 'waiting' | 'approved' | 'rejected',
+        transactionId: t.transactionId,
+        description: t.description,
+        customerName: t.customerName,
+        customerEmail: t.customerEmail,
+        customerPhone: t.customerPhone,
+        customerDocument: t.customerDocument,
+        customerType: t.customerType as 'pf' | 'pj',
+        customerTaxId: t.customerTaxId,
+        customerStreet: t.customerStreet,
+        customerNumber: t.customerNumber,
+        customerComplement: t.customerComplement,
+        customerNeighborhood: t.customerNeighborhood,
+        customerCity: t.customerCity,
+        customerState: t.customerState,
+        customerZipCode: t.customerZipCode,
+        receiverUserId: t.receiverUserId,
+        createdAt: t.createdAt,
+        approvedAt: t.approvedAt,
+        expiresAt: t.pixExpiresAt,
+        pixCode: t.pixCode,
+        pixQrCode: t.pixQrCode,
+        pixExpiresAt: t.pixExpiresAt,
+        authorizationCode: t.authorizationCode,
+        nsu: t.nsu,
+        grossAmount: t.grossAmount,
+        fixedFeeApplied: t.fixedFeeApplied,
+        percentageFeeApplied: t.percentageFeeApplied,
+        totalFeesApplied: t.totalFeesApplied,
+        netAmount: t.netAmount,
+        items: t.items as any,
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    };
+  }
+
   async getTransactionsByUser(userId: string): Promise<Transaction[]> {
     const transactions = await this.prisma.transaction.findMany({
       where: { receiverUserId: userId },
@@ -368,6 +517,7 @@ export class TransactionsService {
       receiverUserId: t.receiverUserId,
       createdAt: t.createdAt,
       approvedAt: t.approvedAt,
+      expiresAt: t.pixExpiresAt,
       pixCode: t.pixCode,
       pixQrCode: t.pixQrCode,
       pixExpiresAt: t.pixExpiresAt,

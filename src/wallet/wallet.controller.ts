@@ -11,8 +11,12 @@ export class WalletController {
   }
 
   @Get(':userId/balance')
-  getBalance(@Param('userId') userId: string) {
-    return this.walletService.getBalance(userId);
+  getBalance(
+    @Param('userId') userId: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.walletService.getBalance(userId, { from, to });
   }
 
   @Get(':userId/statement')

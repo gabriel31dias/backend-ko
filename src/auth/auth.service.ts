@@ -19,6 +19,7 @@ export class AuthService {
         id: userWithKeysAndToken.id,
         name: userWithKeysAndToken.name,
         email: userWithKeysAndToken.email,
+        status: userWithKeysAndToken.status,
         wallet: userWithKeysAndToken.wallet,
         publicKey: userWithKeysAndToken.publicKey,
         secretKey: userWithKeysAndToken.secretKey,

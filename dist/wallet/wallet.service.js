@@ -42,9 +42,29 @@ let WalletService = class WalletService {
         };
         return this.walletMovementService.getStatement(userId, statementOptions);
     }
-    async getBalance(userId) {
+    async getBalance(userId, options) {
         const user = await this.usersService.findById(userId);
         const averageTicket = await this.calculateAverageTicket(userId);
+        const fromDate = this.parseDate(options === null || options === void 0 ? void 0 : options.from, 'from');
+        const toDate = this.parseDate(options === null || options === void 0 ? void 0 : options.to, 'to');
+        if (fromDate && toDate && fromDate > toDate) {
+            throw new common_1.BadRequestException('Data inicial não pode ser maior que a data final');
+        }
+        const createdAtFilter = fromDate || toDate
+            ? Object.assign(Object.assign({}, (fromDate && { gte: fromDate })), (toDate && { lte: toDate })) : undefined;
+        const [creditsAggregate, debitsAggregate] = await Promise.all([
+            this.prisma.walletMovement.aggregate({
+                where: Object.assign({ userId, type: 'credit' }, (createdAtFilter && { createdAt: createdAtFilter })),
+                _sum: { amount: true },
+            }),
+            this.prisma.walletMovement.aggregate({
+                where: Object.assign({ userId, type: 'debit' }, (createdAtFilter && { createdAt: createdAtFilter })),
+                _sum: { amount: true },
+            }),
+        ]);
+        const periodCredits = creditsAggregate._sum.amount || 0;
+        const periodDebits = debitsAggregate._sum.amount || 0;
+        const netMovement = periodCredits - periodDebits;
         return {
             userId: user.id,
             balance: user.wallet.balance,
@@ -52,6 +72,13 @@ let WalletService = class WalletService {
             currency: user.wallet.currency,
             averageTicketSold: averageTicket,
             refundFee: 0,
+            period: {
+                from: fromDate,
+                to: toDate,
+                totalCredits: periodCredits,
+                totalDebits: periodDebits,
+                netMovement,
+            },
         };
     }
     async calculateAverageTicket(userId) {
@@ -66,6 +93,16 @@ let WalletService = class WalletService {
         const totalAmount = aggregates._sum.amount || 0;
         const totalCount = aggregates._count.id || 0;
         return totalCount > 0 ? totalAmount / totalCount : 0;
+    }
+    parseDate(value, label) {
+        if (!value) {
+            return undefined;
+        }
+        const parsed = new Date(value);
+        if (isNaN(parsed.getTime())) {
+            throw new common_1.BadRequestException(`Data inválida para o parâmetro ${label || 'date'}`);
+        }
+        return parsed;
     }
 };
 exports.WalletService = WalletService;
