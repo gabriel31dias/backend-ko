@@ -27,9 +27,27 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async createUser(payload: CreateUserDto, documents: DocumentUploadPaths = {}): Promise<User> {
-    const existing = await this.findByEmail(payload.email);
+    const normalizedEmail = (payload.email ?? '').trim();
+    const normalizedCpf = payload.cpf?.trim();
+    const normalizedCnpj = payload.cnpj?.trim();
+
+    const existing = await this.findByEmail(normalizedEmail);
     if (existing) {
       throw new ConflictException('E-mail já cadastrado');
+    }
+
+    if (normalizedCpf) {
+      const cpfConflict = await this.findByCpf(normalizedCpf);
+      if (cpfConflict) {
+        throw new ConflictException('CPF já cadastrado');
+      }
+    }
+
+    if (normalizedCnpj) {
+      const cnpjConflict = await this.findByCnpj(normalizedCnpj);
+      if (cnpjConflict) {
+        throw new ConflictException('CNPJ já cadastrado');
+      }
     }
 
     const hashedPassword = await this.hashPassword(payload.password);
@@ -37,13 +55,13 @@ export class UsersService {
     const created = await this.prisma.user.create({
       data: {
         name: payload.name,
-        email: payload.email.toLowerCase(),
+        email: normalizedEmail.toLowerCase(),
         phone: payload.phone,
         password: hashedPassword,
         operationType: payload.operationType,
         averageTicket: payload.averageTicket,
-        cpf: payload.cpf,
-        cnpj: payload.cnpj,
+        cpf: normalizedCpf,
+        cnpj: normalizedCnpj,
         corporateName: payload.corporateName,
         salesPageLink: payload.salesPageLink,
         // Campos de endereço
@@ -74,12 +92,30 @@ export class UsersService {
     return this.toDomain(created);
   }
 
-  async findByEmail(email: string): Promise<User | undefined> {
+  async findByEmail(email?: string): Promise<User | undefined> {
     if (!email) {
       return;
     }
     const normalizedEmail = email.toLowerCase();
     const user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
+    return user ? this.toDomain(user) : undefined;
+  }
+
+  async findByCpf(cpf?: string): Promise<User | undefined> {
+    const normalizedCpf = cpf?.trim();
+    if (!normalizedCpf) {
+      return;
+    }
+    const user = await this.prisma.user.findFirst({ where: { cpf: normalizedCpf } });
+    return user ? this.toDomain(user) : undefined;
+  }
+
+  async findByCnpj(cnpj?: string): Promise<User | undefined> {
+    const normalizedCnpj = cnpj?.trim();
+    if (!normalizedCnpj) {
+      return;
+    }
+    const user = await this.prisma.user.findFirst({ where: { cnpj: normalizedCnpj } });
     return user ? this.toDomain(user) : undefined;
   }
 

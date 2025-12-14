@@ -17,7 +17,9 @@ export declare class UsersService {
     private readonly prisma;
     constructor(prisma: PrismaService);
     createUser(payload: CreateUserDto, documents?: DocumentUploadPaths): Promise<User>;
-    findByEmail(email: string): Promise<User | undefined>;
+    findByEmail(email?: string): Promise<User | undefined>;
+    findByCpf(cpf?: string): Promise<User | undefined>;
+    findByCnpj(cnpj?: string): Promise<User | undefined>;
     findById(id: string): Promise<User>;
     validateCredentials(email: string, password: string): Promise<User>;
     ensureApiKeys(user: User): Promise<User>;

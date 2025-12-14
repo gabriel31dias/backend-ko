@@ -21,33 +21,48 @@ let UsersService = class UsersService {
         this.prisma = prisma;
     }
     async createUser(payload, documents = {}) {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j;
-        const existing = await this.findByEmail(payload.email);
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
+        const normalizedEmail = ((_a = payload.email) !== null && _a !== void 0 ? _a : '').trim();
+        const normalizedCpf = (_b = payload.cpf) === null || _b === void 0 ? void 0 : _b.trim();
+        const normalizedCnpj = (_c = payload.cnpj) === null || _c === void 0 ? void 0 : _c.trim();
+        const existing = await this.findByEmail(normalizedEmail);
         if (existing) {
             throw new common_1.ConflictException('E-mail já cadastrado');
+        }
+        if (normalizedCpf) {
+            const cpfConflict = await this.findByCpf(normalizedCpf);
+            if (cpfConflict) {
+                throw new common_1.ConflictException('CPF já cadastrado');
+            }
+        }
+        if (normalizedCnpj) {
+            const cnpjConflict = await this.findByCnpj(normalizedCnpj);
+            if (cnpjConflict) {
+                throw new common_1.ConflictException('CNPJ já cadastrado');
+            }
         }
         const hashedPassword = await this.hashPassword(payload.password);
         const created = await this.prisma.user.create({
             data: {
                 name: payload.name,
-                email: payload.email.toLowerCase(),
+                email: normalizedEmail.toLowerCase(),
                 phone: payload.phone,
                 password: hashedPassword,
                 operationType: payload.operationType,
                 averageTicket: payload.averageTicket,
-                cpf: payload.cpf,
-                cnpj: payload.cnpj,
+                cpf: normalizedCpf,
+                cnpj: normalizedCnpj,
                 corporateName: payload.corporateName,
                 salesPageLink: payload.salesPageLink,
-                addressCep: (_a = payload.address) === null || _a === void 0 ? void 0 : _a.cep,
-                addressStreet: (_b = payload.address) === null || _b === void 0 ? void 0 : _b.street,
-                addressNumber: (_c = payload.address) === null || _c === void 0 ? void 0 : _c.number,
-                addressComplement: (_d = payload.address) === null || _d === void 0 ? void 0 : _d.complement,
-                addressNeighborhood: (_e = payload.address) === null || _e === void 0 ? void 0 : _e.neighborhood,
-                addressCity: (_f = payload.address) === null || _f === void 0 ? void 0 : _f.city,
-                addressState: (_g = payload.address) === null || _g === void 0 ? void 0 : _g.state,
-                documentName: (_h = payload.documents) === null || _h === void 0 ? void 0 : _h.name,
-                documentCpf: (_j = payload.documents) === null || _j === void 0 ? void 0 : _j.cpf,
+                addressCep: (_d = payload.address) === null || _d === void 0 ? void 0 : _d.cep,
+                addressStreet: (_e = payload.address) === null || _e === void 0 ? void 0 : _e.street,
+                addressNumber: (_f = payload.address) === null || _f === void 0 ? void 0 : _f.number,
+                addressComplement: (_g = payload.address) === null || _g === void 0 ? void 0 : _g.complement,
+                addressNeighborhood: (_h = payload.address) === null || _h === void 0 ? void 0 : _h.neighborhood,
+                addressCity: (_j = payload.address) === null || _j === void 0 ? void 0 : _j.city,
+                addressState: (_k = payload.address) === null || _k === void 0 ? void 0 : _k.state,
+                documentName: (_l = payload.documents) === null || _l === void 0 ? void 0 : _l.name,
+                documentCpf: (_m = payload.documents) === null || _m === void 0 ? void 0 : _m.cpf,
                 pfDocumentFrontPath: documents.pfDocumentFront,
                 pfDocumentBackPath: documents.pfDocumentBack,
                 pfSelfieDocumentPath: documents.pfSelfieDocument,
@@ -69,6 +84,22 @@ let UsersService = class UsersService {
         }
         const normalizedEmail = email.toLowerCase();
         const user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
+        return user ? this.toDomain(user) : undefined;
+    }
+    async findByCpf(cpf) {
+        const normalizedCpf = cpf === null || cpf === void 0 ? void 0 : cpf.trim();
+        if (!normalizedCpf) {
+            return;
+        }
+        const user = await this.prisma.user.findFirst({ where: { cpf: normalizedCpf } });
+        return user ? this.toDomain(user) : undefined;
+    }
+    async findByCnpj(cnpj) {
+        const normalizedCnpj = cnpj === null || cnpj === void 0 ? void 0 : cnpj.trim();
+        if (!normalizedCnpj) {
+            return;
+        }
+        const user = await this.prisma.user.findFirst({ where: { cnpj: normalizedCnpj } });
         return user ? this.toDomain(user) : undefined;
     }
     async findById(id) {
