@@ -29,6 +29,7 @@ export interface Transaction {
   receiverUserId: string;
   createdAt: Date;
   approvedAt?: Date;
+  expiresAt?: Date;
   // PIX específico
   pixCode?: string;
   pixQrCode?: string;

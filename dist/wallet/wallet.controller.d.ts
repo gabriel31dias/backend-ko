@@ -11,13 +11,20 @@ export declare class WalletController {
         averageTicketSold: number;
         refundFee: number;
     }>;
-    getBalance(userId: string): Promise<{
+    getBalance(userId: string, from?: string, to?: string): Promise<{
         userId: string;
         balance: number;
         grossBalance: number;
         currency: string;
         averageTicketSold: number;
         refundFee: number;
+        period: {
+            from: Date;
+            to: Date;
+            totalCredits: number;
+            totalDebits: number;
+            netMovement: number;
+        };
     }>;
     getStatement(userId: string, from?: string, to?: string, limit?: string, category?: string): Promise<import("./entities/wallet-movement.entity").WalletStatement>;
 }

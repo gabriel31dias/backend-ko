@@ -43,6 +43,7 @@ export interface User {
   email: string;
   phone?: string;
   password: string;
+  status?: string;
   operationType?: string;
   averageTicket?: number;
   cpf?: string;
@@ -56,4 +57,5 @@ export interface User {
   secretKey?: string;
   fixedFee?: number;
   percentageFee?: number;
+  notes?: string;
 }

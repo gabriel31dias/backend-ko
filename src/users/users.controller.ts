@@ -1,10 +1,13 @@
-import { Body, Controller, Post, Put, Param, UploadedFiles, UnsupportedMediaTypeException, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Post, Put, Param, Get, Query, UploadedFiles, UnsupportedMediaTypeException, UseInterceptors, Patch } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { existsSync, mkdirSync } from 'fs';
 import { extname, join, relative } from 'path';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateFeesDto } from './dto/update-fees.dto';
+import { UpdateStatusDto } from './dto/update-status.dto';
+import { ApprovalNotesDto } from './dto/approval-notes.dto';
+import { RejectUserDto } from './dto/reject-user.dto';
 import { User } from './user.entity';
 import { DocumentUploadPaths, UsersService } from './users.service';
 import { Public } from '../auth/public.decorator';
@@ -54,6 +57,67 @@ export class UsersController {
   @Put(':id/fees')
   async updateFees(@Param('id') id: string, @Body() updateFeesDto: UpdateFeesDto) {
     const user = await this.usersService.updateFees(id, updateFeesDto);
+    return this.toResponse(user);
+  }
+
+  @Get('sellers/pending')
+  async getPendingSellers(@Query('page') page?: string, @Query('limit') limit?: string) {
+    const pageNum = parseInt(page || '1');
+    const limitNum = parseInt(limit || '10');
+    const result = await this.usersService.getPendingSellers(pageNum, limitNum);
+    
+    return {
+      sellers: result.sellers.map(user => this.toResponse(user)),
+      pagination: result.pagination,
+    };
+  }
+
+  @Get()
+  async getUsers(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+  ) {
+    const parsedPage = parseInt(page ?? '1', 10);
+    const parsedLimit = parseInt(limit ?? '10', 10);
+    const pageNum = Number.isNaN(parsedPage) ? 1 : Math.max(parsedPage, 1);
+    const limitNum = Number.isNaN(parsedLimit) ? 10 : Math.max(parsedLimit, 1);
+    const result = await this.usersService.getUsers({ page: pageNum, limit: limitNum, status, search });
+
+    return {
+      users: result.users.map(user => this.toResponse(user)),
+      pagination: result.pagination,
+    };
+  }
+
+  @Get(':id')
+  async getUserById(@Param('id') id: string) {
+    const user = await this.usersService.findById(id);
+    return this.toResponse(user);
+  }
+
+  @Patch(':id')
+  async updateUser(@Param('id') id: string, @Body() updateStatusDto: UpdateStatusDto) {
+    const user = await this.usersService.updateStatus(id, updateStatusDto.status, { notes: updateStatusDto.notes });
+    return this.toResponse(user);
+  }
+
+  @Patch(':id/approve')
+  async approveUser(@Param('id') id: string, @Body() approvalNotesDto: ApprovalNotesDto) {
+    const user = await this.usersService.updateStatus(id, 'approved', { notes: approvalNotesDto?.notes });
+    return this.toResponse(user);
+  }
+
+  @Patch(':id/reject')
+  async rejectUser(@Param('id') id: string, @Body() rejectUserDto: RejectUserDto) {
+    const user = await this.usersService.updateStatus(id, 'rejected', { notes: rejectUserDto.notes });
+    return this.toResponse(user);
+  }
+
+  @Put(':id/status')
+  async updateStatus(@Param('id') id: string, @Body() body: UpdateStatusDto) {
+    const user = await this.usersService.updateStatus(id, body.status, { notes: body.notes });
     return this.toResponse(user);
   }
 

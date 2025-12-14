@@ -1,10 +1,14 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { User as PrismaUser } from '@prisma/client';
+import { Prisma, User as PrismaUser } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateFeesDto } from './dto/update-fees.dto';
 import { User, WalletSnapshot } from './user.entity';
 import { randomUUID } from 'crypto';
+import { compare, hash } from 'bcryptjs';
+
+const VALID_STATUSES = ['pending', 'approved', 'rejected'] as const;
+const PASSWORD_SALT_ROUNDS = 10;
 
 export interface DocumentUploadPaths {
   pfDocumentFront?: string;
@@ -28,12 +32,14 @@ export class UsersService {
       throw new ConflictException('E-mail já cadastrado');
     }
 
+    const hashedPassword = await this.hashPassword(payload.password);
+
     const created = await this.prisma.user.create({
       data: {
         name: payload.name,
         email: payload.email.toLowerCase(),
         phone: payload.phone,
-        password: payload.password,
+        password: hashedPassword,
         operationType: payload.operationType,
         averageTicket: payload.averageTicket,
         cpf: payload.cpf,
@@ -86,8 +92,13 @@ export class UsersService {
   }
 
   async validateCredentials(email: string, password: string): Promise<User> {
-    const user = await this.findByEmail(email);
-    if (!user || user.password !== password) {
+    const user = await this.findByEmail(email?.trim());
+    if (!user) {
+      throw new NotFoundException('Credenciais inválidas');
+    }
+
+    const isPasswordValid = await this.verifyPassword(password ?? '', user.password);
+    if (!isPasswordValid) {
       throw new NotFoundException('Credenciais inválidas');
     }
     return user;
@@ -145,6 +156,26 @@ export class UsersService {
     return `sk_${uuid1}${uuid2.substring(0, 16)}`;
   }
 
+  private async hashPassword(password: string): Promise<string> {
+    return hash(password, PASSWORD_SALT_ROUNDS);
+  }
+
+  private async verifyPassword(raw: string, stored: string): Promise<boolean> {
+    if (!stored) {
+      return false;
+    }
+
+    if (this.isBcryptHash(stored)) {
+      return compare(raw, stored);
+    }
+
+    return stored === raw;
+  }
+
+  private isBcryptHash(value: string): boolean {
+    return value.startsWith('$2a$') || value.startsWith('$2b$') || value.startsWith('$2y$');
+  }
+
   async updateFees(userId: string, updateFeesDto: UpdateFeesDto): Promise<User> {
     const updatedUser = await this.prisma.user.update({
       where: { id: userId },
@@ -152,6 +183,42 @@ export class UsersService {
         fixedFee: updateFeesDto.fixedFee,
         percentageFee: updateFeesDto.percentageFee,
       },
+    });
+
+    return this.toDomain(updatedUser);
+  }
+
+  async getPendingSellers(page: number = 1, limit: number = 10): Promise<{
+    sellers: User[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    const result = await this.getUsers({ page, limit, status: 'pending' });
+    return {
+      sellers: result.users,
+      pagination: result.pagination,
+    };
+  }
+
+  async updateStatus(userId: string, status: string, options: { notes?: string } = {}): Promise<User> {
+    const normalizedStatus = status?.toLowerCase();
+    if (!VALID_STATUSES.includes(normalizedStatus as typeof VALID_STATUSES[number])) {
+      throw new ConflictException('Status inválido. Use: pending, approved, rejected');
+    }
+
+    const notesValue = normalizedStatus === 'rejected'
+      ? (options.notes?.trim() || null)
+      : null;
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: { status: normalizedStatus, notes: notesValue },
     });
 
     return this.toDomain(updatedUser);
@@ -203,6 +270,7 @@ export class UsersService {
       email: model.email,
       phone: model.phone,
       password: model.password,
+      status: model.status,
       operationType: model.operationType,
       averageTicket: model.averageTicket,
       cpf: model.cpf,
@@ -216,6 +284,67 @@ export class UsersService {
       secretKey: model.secretKey,
       fixedFee: model.fixedFee,
       percentageFee: model.percentageFee,
+      notes: model.notes ?? undefined,
+    };
+  }
+
+  async getUsers(params: { page?: number; limit?: number; status?: string; search?: string } = {}): Promise<{
+    users: User[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  }> {
+    const page = Math.max(params.page ?? 1, 1);
+    const limit = Math.max(params.limit ?? 10, 1);
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.UserWhereInput = {};
+    if (params.status) {
+      const normalizedStatus = params.status.toLowerCase();
+      if (!VALID_STATUSES.includes(normalizedStatus as typeof VALID_STATUSES[number])) {
+        throw new ConflictException('Status inválido. Use: pending, approved, rejected');
+      }
+      where.status = normalizedStatus;
+    }
+    if (params.search) {
+      const trimmedSearch = params.search.trim();
+      if (trimmedSearch) {
+        where.OR = [
+          { name: { contains: trimmedSearch, mode: 'insensitive' } },
+          { email: { contains: trimmedSearch, mode: 'insensitive' } },
+          { cpf: { contains: trimmedSearch, mode: 'insensitive' } },
+          { cnpj: { contains: trimmedSearch, mode: 'insensitive' } },
+        ];
+      }
+    }
+
+    const [users, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      users: users.map(user => this.toDomain(user)),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
     };
   }
 }

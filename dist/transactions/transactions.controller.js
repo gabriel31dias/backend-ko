@@ -16,11 +16,16 @@ exports.TransactionsController = void 0;
 const common_1 = require("@nestjs/common");
 const create_transaction_dto_1 = require("./dto/create-transaction.dto");
 const webhook_dto_1 = require("./dto/webhook.dto");
+const pagination_query_dto_1 = require("./dto/pagination-query.dto");
 const transactions_service_1 = require("./transactions.service");
 const public_decorator_1 = require("../auth/public.decorator");
+const user_decorator_1 = require("../auth/user.decorator");
 let TransactionsController = class TransactionsController {
     constructor(transactionsService) {
         this.transactionsService = transactionsService;
+    }
+    async getMyTransactions(user, query) {
+        return this.transactionsService.getTransactionsPaginated(user.id, query);
     }
     async processTransaction(dto) {
         return this.transactionsService.processTransaction(dto);
@@ -34,7 +39,16 @@ let TransactionsController = class TransactionsController {
 };
 exports.TransactionsController = TransactionsController;
 __decorate([
+    (0, common_1.Get)(),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, pagination_query_dto_1.PaginationQueryDto]),
+    __metadata("design:returntype", Promise)
+], TransactionsController.prototype, "getMyTransactions", null);
+__decorate([
     (0, common_1.Post)('process'),
+    (0, public_decorator_1.Public)(),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [create_transaction_dto_1.CreateTransactionDto]),
@@ -42,6 +56,7 @@ __decorate([
 ], TransactionsController.prototype, "processTransaction", null);
 __decorate([
     (0, common_1.Get)('user/:userId'),
+    (0, public_decorator_1.Public)(),
     __param(0, (0, common_1.Param)('userId')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
@@ -49,6 +64,7 @@ __decorate([
 ], TransactionsController.prototype, "getTransactionsByUser", null);
 __decorate([
     (0, common_1.Post)('webhook'),
+    (0, public_decorator_1.Public)(),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [webhook_dto_1.WebhookDto]),
@@ -56,7 +72,6 @@ __decorate([
 ], TransactionsController.prototype, "processWebhook", null);
 exports.TransactionsController = TransactionsController = __decorate([
     (0, common_1.Controller)('transactions'),
-    (0, public_decorator_1.Public)(),
     __metadata("design:paramtypes", [transactions_service_1.TransactionsService])
 ], TransactionsController);
 //# sourceMappingURL=transactions.controller.js.map

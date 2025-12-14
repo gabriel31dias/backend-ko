@@ -13,6 +13,9 @@ exports.UsersService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 const crypto_1 = require("crypto");
+const bcryptjs_1 = require("bcryptjs");
+const VALID_STATUSES = ['pending', 'approved', 'rejected'];
+const PASSWORD_SALT_ROUNDS = 10;
 let UsersService = class UsersService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -23,12 +26,13 @@ let UsersService = class UsersService {
         if (existing) {
             throw new common_1.ConflictException('E-mail já cadastrado');
         }
+        const hashedPassword = await this.hashPassword(payload.password);
         const created = await this.prisma.user.create({
             data: {
                 name: payload.name,
                 email: payload.email.toLowerCase(),
                 phone: payload.phone,
-                password: payload.password,
+                password: hashedPassword,
                 operationType: payload.operationType,
                 averageTicket: payload.averageTicket,
                 cpf: payload.cpf,
@@ -75,8 +79,12 @@ let UsersService = class UsersService {
         return this.toDomain(user);
     }
     async validateCredentials(email, password) {
-        const user = await this.findByEmail(email);
-        if (!user || user.password !== password) {
+        const user = await this.findByEmail(email === null || email === void 0 ? void 0 : email.trim());
+        if (!user) {
+            throw new common_1.NotFoundException('Credenciais inválidas');
+        }
+        const isPasswordValid = await this.verifyPassword(password !== null && password !== void 0 ? password : '', user.password);
+        if (!isPasswordValid) {
             throw new common_1.NotFoundException('Credenciais inválidas');
         }
         return user;
@@ -123,6 +131,21 @@ let UsersService = class UsersService {
         const uuid2 = (0, crypto_1.randomUUID)().replace(/-/g, '');
         return `sk_${uuid1}${uuid2.substring(0, 16)}`;
     }
+    async hashPassword(password) {
+        return (0, bcryptjs_1.hash)(password, PASSWORD_SALT_ROUNDS);
+    }
+    async verifyPassword(raw, stored) {
+        if (!stored) {
+            return false;
+        }
+        if (this.isBcryptHash(stored)) {
+            return (0, bcryptjs_1.compare)(raw, stored);
+        }
+        return stored === raw;
+    }
+    isBcryptHash(value) {
+        return value.startsWith('$2a$') || value.startsWith('$2b$') || value.startsWith('$2y$');
+    }
     async updateFees(userId, updateFeesDto) {
         const updatedUser = await this.prisma.user.update({
             where: { id: userId },
@@ -133,7 +156,30 @@ let UsersService = class UsersService {
         });
         return this.toDomain(updatedUser);
     }
+    async getPendingSellers(page = 1, limit = 10) {
+        const result = await this.getUsers({ page, limit, status: 'pending' });
+        return {
+            sellers: result.users,
+            pagination: result.pagination,
+        };
+    }
+    async updateStatus(userId, status, options = {}) {
+        var _a;
+        const normalizedStatus = status === null || status === void 0 ? void 0 : status.toLowerCase();
+        if (!VALID_STATUSES.includes(normalizedStatus)) {
+            throw new common_1.ConflictException('Status inválido. Use: pending, approved, rejected');
+        }
+        const notesValue = normalizedStatus === 'rejected'
+            ? (((_a = options.notes) === null || _a === void 0 ? void 0 : _a.trim()) || null)
+            : null;
+        const updatedUser = await this.prisma.user.update({
+            where: { id: userId },
+            data: { status: normalizedStatus, notes: notesValue },
+        });
+        return this.toDomain(updatedUser);
+    }
     toDomain(model) {
+        var _a;
         const wallet = {
             balance: model.walletBalance,
             valorReceber: model.walletValorReceber,
@@ -174,6 +220,7 @@ let UsersService = class UsersService {
             email: model.email,
             phone: model.phone,
             password: model.password,
+            status: model.status,
             operationType: model.operationType,
             averageTicket: model.averageTicket,
             cpf: model.cpf,
@@ -187,6 +234,53 @@ let UsersService = class UsersService {
             secretKey: model.secretKey,
             fixedFee: model.fixedFee,
             percentageFee: model.percentageFee,
+            notes: (_a = model.notes) !== null && _a !== void 0 ? _a : undefined,
+        };
+    }
+    async getUsers(params = {}) {
+        var _a, _b;
+        const page = Math.max((_a = params.page) !== null && _a !== void 0 ? _a : 1, 1);
+        const limit = Math.max((_b = params.limit) !== null && _b !== void 0 ? _b : 10, 1);
+        const skip = (page - 1) * limit;
+        const where = {};
+        if (params.status) {
+            const normalizedStatus = params.status.toLowerCase();
+            if (!VALID_STATUSES.includes(normalizedStatus)) {
+                throw new common_1.ConflictException('Status inválido. Use: pending, approved, rejected');
+            }
+            where.status = normalizedStatus;
+        }
+        if (params.search) {
+            const trimmedSearch = params.search.trim();
+            if (trimmedSearch) {
+                where.OR = [
+                    { name: { contains: trimmedSearch, mode: 'insensitive' } },
+                    { email: { contains: trimmedSearch, mode: 'insensitive' } },
+                    { cpf: { contains: trimmedSearch, mode: 'insensitive' } },
+                    { cnpj: { contains: trimmedSearch, mode: 'insensitive' } },
+                ];
+            }
+        }
+        const [users, total] = await Promise.all([
+            this.prisma.user.findMany({
+                where,
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: limit,
+            }),
+            this.prisma.user.count({ where }),
+        ]);
+        const totalPages = Math.ceil(total / limit);
+        return {
+            users: users.map(user => this.toDomain(user)),
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages,
+                hasNext: page < totalPages,
+                hasPrev: page > 1,
+            },
         };
     }
 };

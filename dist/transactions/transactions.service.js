@@ -122,6 +122,8 @@ let TransactionsService = class TransactionsService {
         return `00020126330014BR.GOV.BCB.PIX${(0, crypto_1.randomUUID)().substring(0, 8)}`;
     }
     async createTransaction(dto, userId, adquirenteResponse) {
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 2);
         const transaction = await this.prisma.transaction.create({
             data: {
                 amount: dto.amount,
@@ -175,6 +177,7 @@ let TransactionsService = class TransactionsService {
             receiverUserId: transaction.receiverUserId,
             createdAt: transaction.createdAt,
             approvedAt: transaction.approvedAt,
+            expiresAt: transaction.pixExpiresAt,
             pixCode: transaction.pixCode,
             pixQrCode: transaction.pixQrCode,
             pixExpiresAt: transaction.pixExpiresAt,
@@ -268,6 +271,125 @@ let TransactionsService = class TransactionsService {
             return { success: false, message: 'Erro interno do servidor' };
         }
     }
+    async getTransactionsPaginated(userId, query) {
+        const page = parseInt(query.page || '1');
+        const limit = parseInt(query.limit || '10');
+        const skip = (page - 1) * limit;
+        const where = {
+            receiverUserId: userId
+        };
+        if (query.status) {
+            where.status = query.status;
+        }
+        if (query.paymentMethod) {
+            where.paymentMethod = query.paymentMethod;
+        }
+        if (query.customerName) {
+            where.customerName = {
+                contains: query.customerName,
+                mode: 'insensitive',
+            };
+        }
+        if (query.search) {
+            where.OR = [
+                {
+                    customerName: {
+                        contains: query.search,
+                        mode: 'insensitive',
+                    },
+                },
+                {
+                    customerEmail: {
+                        contains: query.search,
+                        mode: 'insensitive',
+                    },
+                },
+                {
+                    customerTaxId: {
+                        contains: query.search,
+                        mode: 'insensitive',
+                    },
+                },
+                {
+                    customerDocument: {
+                        contains: query.search,
+                        mode: 'insensitive',
+                    },
+                },
+            ];
+        }
+        if (query.startDate || query.endDate) {
+            where.createdAt = {};
+            if (query.startDate) {
+                const startDate = query.startDate.includes('T') ?
+                    new Date(query.startDate) :
+                    new Date(query.startDate + 'T00:00:00');
+                where.createdAt.gte = startDate;
+            }
+            if (query.endDate) {
+                const endDate = query.endDate.includes('T') ?
+                    new Date(query.endDate) :
+                    new Date(query.endDate + 'T23:59:59');
+                where.createdAt.lte = endDate;
+            }
+        }
+        const [transactions, total] = await Promise.all([
+            this.prisma.transaction.findMany({
+                where,
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: limit,
+            }),
+            this.prisma.transaction.count({ where }),
+        ]);
+        const totalPages = Math.ceil(total / limit);
+        return {
+            transactions: transactions.map(t => ({
+                id: t.id,
+                amount: t.amount,
+                paymentMethod: t.paymentMethod,
+                status: t.status,
+                transactionId: t.transactionId,
+                description: t.description,
+                customerName: t.customerName,
+                customerEmail: t.customerEmail,
+                customerPhone: t.customerPhone,
+                customerDocument: t.customerDocument,
+                customerType: t.customerType,
+                customerTaxId: t.customerTaxId,
+                customerStreet: t.customerStreet,
+                customerNumber: t.customerNumber,
+                customerComplement: t.customerComplement,
+                customerNeighborhood: t.customerNeighborhood,
+                customerCity: t.customerCity,
+                customerState: t.customerState,
+                customerZipCode: t.customerZipCode,
+                receiverUserId: t.receiverUserId,
+                createdAt: t.createdAt,
+                approvedAt: t.approvedAt,
+                expiresAt: t.pixExpiresAt,
+                pixCode: t.pixCode,
+                pixQrCode: t.pixQrCode,
+                pixExpiresAt: t.pixExpiresAt,
+                authorizationCode: t.authorizationCode,
+                nsu: t.nsu,
+                grossAmount: t.grossAmount,
+                fixedFeeApplied: t.fixedFeeApplied,
+                percentageFeeApplied: t.percentageFeeApplied,
+                totalFeesApplied: t.totalFeesApplied,
+                netAmount: t.netAmount,
+                items: t.items,
+            })),
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages,
+                hasNext: page < totalPages,
+                hasPrev: page > 1,
+            },
+        };
+    }
     async getTransactionsByUser(userId) {
         const transactions = await this.prisma.transaction.findMany({
             where: { receiverUserId: userId },
@@ -296,6 +418,7 @@ let TransactionsService = class TransactionsService {
             receiverUserId: t.receiverUserId,
             createdAt: t.createdAt,
             approvedAt: t.approvedAt,
+            expiresAt: t.pixExpiresAt,
             pixCode: t.pixCode,
             pixQrCode: t.pixQrCode,
             pixExpiresAt: t.pixExpiresAt,

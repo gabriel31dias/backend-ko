@@ -13,6 +13,8 @@ model User {
   email             String   @unique
   phone             String?
   password          String
+  status            String   @default("pending") // pending, approved, rejected
+  notes             String?
   operationType     String?  // Infoproduto, Produto Físico, Dropshipping, Serviços, Outros
   averageTicket     Float?
   cpf               String?
@@ -119,6 +121,7 @@ model Transaction {
   receiver         User      @relation(fields: [receiverUserId], references: [id])
   createdAt        DateTime  @default(now())
   approvedAt       DateTime?
+  expiresAt        DateTime?  // Data de vencimento da transação
   // PIX específico
   pixCode          String?
   pixQrCode        String?

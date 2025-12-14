@@ -21,14 +21,25 @@ export declare class WalletService {
         limit?: number;
         category?: string;
     }): Promise<import("./entities/wallet-movement.entity").WalletStatement>;
-    getBalance(userId: string): Promise<{
+    getBalance(userId: string, options?: {
+        from?: string;
+        to?: string;
+    }): Promise<{
         userId: string;
         balance: number;
         grossBalance: number;
         currency: string;
         averageTicketSold: number;
         refundFee: number;
+        period: {
+            from: Date;
+            to: Date;
+            totalCredits: number;
+            totalDebits: number;
+            netMovement: number;
+        };
     }>;
     private calculateAverageTicket;
+    private parseDate;
 }
 //# sourceMappingURL=wallet.service.d.ts.map
