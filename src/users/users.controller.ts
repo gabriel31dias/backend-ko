@@ -1,8 +1,9 @@
-import { Body, Controller, Post, Put, Param, Get, Query, UploadedFiles, UnsupportedMediaTypeException, UseInterceptors, Patch } from '@nestjs/common';
+import { Body, Controller, Post, Put, Param, Get, Query, UploadedFiles, UnsupportedMediaTypeException, UseInterceptors, Patch, Req } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { existsSync, mkdirSync } from 'fs';
 import { extname, join, relative } from 'path';
+import { Request } from 'express';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateFeesDto } from './dto/update-fees.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
@@ -48,32 +49,33 @@ export class UsersController {
     },
     limits: { fileSize: 10 * 1024 * 1024 },
   }))
-  async createUser(@Body() payload: CreateUserDto, @UploadedFiles() files?: UploadedDocumentFiles) {
+  async createUser(@Body() payload: CreateUserDto, @UploadedFiles() files?: UploadedDocumentFiles, @Req() req?: Request) {
     const documentPaths = this.extractDocumentPaths(files || {});
     const user = await this.usersService.createUser(payload, documentPaths);
-    return this.toResponse(user);
+    return this.toResponse(user, req);
   }
 
   @Put(':id/fees')
-  async updateFees(@Param('id') id: string, @Body() updateFeesDto: UpdateFeesDto) {
+  async updateFees(@Param('id') id: string, @Body() updateFeesDto: UpdateFeesDto, @Req() req?: Request) {
     const user = await this.usersService.updateFees(id, updateFeesDto);
-    return this.toResponse(user);
+    return this.toResponse(user, req);
   }
 
   @Get('sellers/pending')
-  async getPendingSellers(@Query('page') page?: string, @Query('limit') limit?: string) {
+  async getPendingSellers(@Query('page') page?: string, @Query('limit') limit?: string, @Req() req?: Request) {
     const pageNum = parseInt(page || '1');
     const limitNum = parseInt(limit || '10');
     const result = await this.usersService.getPendingSellers(pageNum, limitNum);
     
     return {
-      sellers: result.sellers.map(user => this.toResponse(user)),
+      sellers: result.sellers.map(user => this.toResponse(user, req)),
       pagination: result.pagination,
     };
   }
 
   @Get()
   async getUsers(
+    @Req() req: Request,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('status') status?: string,
@@ -86,39 +88,39 @@ export class UsersController {
     const result = await this.usersService.getUsers({ page: pageNum, limit: limitNum, status, search });
 
     return {
-      users: result.users.map(user => this.toResponse(user)),
+      users: result.users.map(user => this.toResponse(user, req)),
       pagination: result.pagination,
     };
   }
 
   @Get(':id')
-  async getUserById(@Param('id') id: string) {
+  async getUserById(@Param('id') id: string, @Req() req?: Request) {
     const user = await this.usersService.findById(id);
-    return this.toResponse(user);
+    return this.toResponse(user, req);
   }
 
   @Patch(':id')
-  async updateUser(@Param('id') id: string, @Body() updateStatusDto: UpdateStatusDto) {
+  async updateUser(@Param('id') id: string, @Body() updateStatusDto: UpdateStatusDto, @Req() req?: Request) {
     const user = await this.usersService.updateStatus(id, updateStatusDto.status, { notes: updateStatusDto.notes });
-    return this.toResponse(user);
+    return this.toResponse(user, req);
   }
 
   @Patch(':id/approve')
-  async approveUser(@Param('id') id: string, @Body() approvalNotesDto: ApprovalNotesDto) {
+  async approveUser(@Param('id') id: string, @Body() approvalNotesDto: ApprovalNotesDto, @Req() req?: Request) {
     const user = await this.usersService.updateStatus(id, 'approved', { notes: approvalNotesDto?.notes });
-    return this.toResponse(user);
+    return this.toResponse(user, req);
   }
 
   @Patch(':id/reject')
-  async rejectUser(@Param('id') id: string, @Body() rejectUserDto: RejectUserDto) {
+  async rejectUser(@Param('id') id: string, @Body() rejectUserDto: RejectUserDto, @Req() req?: Request) {
     const user = await this.usersService.updateStatus(id, 'rejected', { notes: rejectUserDto.notes });
-    return this.toResponse(user);
+    return this.toResponse(user, req);
   }
 
   @Put(':id/status')
-  async updateStatus(@Param('id') id: string, @Body() body: UpdateStatusDto) {
+  async updateStatus(@Param('id') id: string, @Body() body: UpdateStatusDto, @Req() req?: Request) {
     const user = await this.usersService.updateStatus(id, body.status, { notes: body.notes });
-    return this.toResponse(user);
+    return this.toResponse(user, req);
   }
 
   private extractDocumentPaths(files: UploadedDocumentFiles): DocumentUploadPaths {
@@ -147,12 +149,92 @@ export class UsersController {
     return join('uploads', 'users', file.filename);
   }
 
-  private toResponse(user: User) {
+  private toResponse(user: User, req?: Request) {
     const { password, ...rest } = user;
     return {
       ...rest,
+      documents: this.buildDocumentsResponse(user.documents, req),
+      documentFiles: this.buildDocumentFiles(user.documents, req),
       publicKey: user.publicKey,
       secretKey: user.secretKey,
+    };
+  }
+
+  private buildDocumentsResponse(documents: User['documents'], req?: Request) {
+    if (!documents) {
+      return undefined;
+    }
+    const pf = documents.pf
+      ? {
+          ...documents.pf,
+          documentFront: this.buildFileUrl(documents.pf.documentFront, req),
+          documentBack: this.buildFileUrl(documents.pf.documentBack, req),
+          selfieWithDocument: this.buildFileUrl(documents.pf.selfieWithDocument, req),
+          bankProof: this.buildFileUrl(documents.pf.bankProof, req),
+        }
+      : undefined;
+
+    const pj = documents.pj
+      ? {
+          ...documents.pj,
+          legalRepresentativeDocumentFront: this.buildFileUrl(documents.pj.legalRepresentativeDocumentFront, req),
+          legalRepresentativeDocumentBack: this.buildFileUrl(documents.pj.legalRepresentativeDocumentBack, req),
+          legalRepresentativeSelfie: this.buildFileUrl(documents.pj.legalRepresentativeSelfie, req),
+          bankProof: this.buildFileUrl(documents.pj.bankProof, req),
+          cnpjDocument: this.buildFileUrl(documents.pj.cnpjDocument, req),
+        }
+      : undefined;
+
+    return {
+      ...documents,
+      pf,
+      pj,
+    };
+  }
+
+  private buildFileUrl(filePath?: string, req?: Request): string | undefined {
+    if (!filePath) {
+      return undefined;
+    }
+
+    if (/^https?:\/\//i.test(filePath)) {
+      return filePath;
+    }
+
+    const sanitizedPath = filePath.replace(/\\/g, '/').replace(/^\/+/, '');
+    const baseUrl = this.getBaseUrl(req);
+    return `${baseUrl}/${sanitizedPath}`;
+  }
+
+  private getBaseUrl(req?: Request): string {
+    const configuredBase = process.env.FILE_BASE_URL || process.env.APP_URL;
+    if (configuredBase) {
+      return configuredBase.replace(/\/+$/, '');
+    }
+
+    if (req) {
+      const protocol = req.protocol;
+      const host = req.get('host');
+      if (host) {
+        return `${protocol}://${host}`.replace(/\/+$/, '');
+      }
+    }
+
+    const port = process.env.PORT || '3000';
+    return `http://localhost:${port}`.replace(/\/+$/, '');
+  }
+
+  private buildDocumentFiles(documents?: User['documents'], req?: Request) {
+    return {
+      pfDocumentFront: this.buildFileUrl(documents?.pf?.documentFront, req) ?? null,
+      pfDocumentBack: this.buildFileUrl(documents?.pf?.documentBack, req) ?? null,
+      pfSelfieDocument: this.buildFileUrl(documents?.pf?.selfieWithDocument, req) ?? null,
+      pfBankProof: this.buildFileUrl(documents?.pf?.bankProof, req) ?? null,
+      pjLegalRepresentativeDocumentFront: this.buildFileUrl(documents?.pj?.legalRepresentativeDocumentFront, req) ?? null,
+      pjLegalRepresentativeDocumentBack: this.buildFileUrl(documents?.pj?.legalRepresentativeDocumentBack, req) ?? null,
+      pjSelfieDocument: this.buildFileUrl(documents?.pj?.legalRepresentativeSelfie, req) ?? null,
+      pjBankProof: this.buildFileUrl(documents?.pj?.bankProof, req) ?? null,
+      pjCnpjDocument: this.buildFileUrl(documents?.pj?.cnpjDocument, req) ?? null,
     };
   }
 }

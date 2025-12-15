@@ -1,3 +1,4 @@
+import { Request } from 'express';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateFeesDto } from './dto/update-fees.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
@@ -7,7 +8,35 @@ import { DocumentUploadPaths, UsersService } from './users.service';
 export declare class UsersController {
     private readonly usersService;
     constructor(usersService: UsersService);
-    createUser(payload: CreateUserDto, files?: UploadedDocumentFiles): Promise<{
+    createUser(payload: CreateUserDto, files?: UploadedDocumentFiles, req?: Request): Promise<{
+        documents: {
+            pf: {
+                documentFront: string;
+                documentBack: string;
+                selfieWithDocument: string;
+                bankProof: string;
+            };
+            pj: {
+                legalRepresentativeDocumentFront: string;
+                legalRepresentativeDocumentBack: string;
+                legalRepresentativeSelfie: string;
+                bankProof: string;
+                cnpjDocument: string;
+            };
+            name?: string;
+            cpf?: string;
+        };
+        documentFiles: {
+            pfDocumentFront: string;
+            pfDocumentBack: string;
+            pfSelfieDocument: string;
+            pfBankProof: string;
+            pjLegalRepresentativeDocumentFront: string;
+            pjLegalRepresentativeDocumentBack: string;
+            pjSelfieDocument: string;
+            pjBankProof: string;
+            pjCnpjDocument: string;
+        };
         publicKey: string;
         secretKey: string;
         id: string;
@@ -22,13 +51,40 @@ export declare class UsersController {
         corporateName?: string;
         salesPageLink?: string;
         address?: import("./user.entity").AddressSnapshot;
-        documents?: import("./user.entity").DocumentsSnapshot;
         wallet: import("./user.entity").WalletSnapshot;
         fixedFee?: number;
         percentageFee?: number;
         notes?: string;
     }>;
-    updateFees(id: string, updateFeesDto: UpdateFeesDto): Promise<{
+    updateFees(id: string, updateFeesDto: UpdateFeesDto, req?: Request): Promise<{
+        documents: {
+            pf: {
+                documentFront: string;
+                documentBack: string;
+                selfieWithDocument: string;
+                bankProof: string;
+            };
+            pj: {
+                legalRepresentativeDocumentFront: string;
+                legalRepresentativeDocumentBack: string;
+                legalRepresentativeSelfie: string;
+                bankProof: string;
+                cnpjDocument: string;
+            };
+            name?: string;
+            cpf?: string;
+        };
+        documentFiles: {
+            pfDocumentFront: string;
+            pfDocumentBack: string;
+            pfSelfieDocument: string;
+            pfBankProof: string;
+            pjLegalRepresentativeDocumentFront: string;
+            pjLegalRepresentativeDocumentBack: string;
+            pjSelfieDocument: string;
+            pjBankProof: string;
+            pjCnpjDocument: string;
+        };
         publicKey: string;
         secretKey: string;
         id: string;
@@ -43,14 +99,41 @@ export declare class UsersController {
         corporateName?: string;
         salesPageLink?: string;
         address?: import("./user.entity").AddressSnapshot;
-        documents?: import("./user.entity").DocumentsSnapshot;
         wallet: import("./user.entity").WalletSnapshot;
         fixedFee?: number;
         percentageFee?: number;
         notes?: string;
     }>;
-    getPendingSellers(page?: string, limit?: string): Promise<{
+    getPendingSellers(page?: string, limit?: string, req?: Request): Promise<{
         sellers: {
+            documents: {
+                pf: {
+                    documentFront: string;
+                    documentBack: string;
+                    selfieWithDocument: string;
+                    bankProof: string;
+                };
+                pj: {
+                    legalRepresentativeDocumentFront: string;
+                    legalRepresentativeDocumentBack: string;
+                    legalRepresentativeSelfie: string;
+                    bankProof: string;
+                    cnpjDocument: string;
+                };
+                name?: string;
+                cpf?: string;
+            };
+            documentFiles: {
+                pfDocumentFront: string;
+                pfDocumentBack: string;
+                pfSelfieDocument: string;
+                pfBankProof: string;
+                pjLegalRepresentativeDocumentFront: string;
+                pjLegalRepresentativeDocumentBack: string;
+                pjSelfieDocument: string;
+                pjBankProof: string;
+                pjCnpjDocument: string;
+            };
             publicKey: string;
             secretKey: string;
             id: string;
@@ -65,7 +148,6 @@ export declare class UsersController {
             corporateName?: string;
             salesPageLink?: string;
             address?: import("./user.entity").AddressSnapshot;
-            documents?: import("./user.entity").DocumentsSnapshot;
             wallet: import("./user.entity").WalletSnapshot;
             fixedFee?: number;
             percentageFee?: number;
@@ -80,8 +162,36 @@ export declare class UsersController {
             hasPrev: boolean;
         };
     }>;
-    getUsers(page?: string, limit?: string, status?: string, search?: string): Promise<{
+    getUsers(req: Request, page?: string, limit?: string, status?: string, search?: string): Promise<{
         users: {
+            documents: {
+                pf: {
+                    documentFront: string;
+                    documentBack: string;
+                    selfieWithDocument: string;
+                    bankProof: string;
+                };
+                pj: {
+                    legalRepresentativeDocumentFront: string;
+                    legalRepresentativeDocumentBack: string;
+                    legalRepresentativeSelfie: string;
+                    bankProof: string;
+                    cnpjDocument: string;
+                };
+                name?: string;
+                cpf?: string;
+            };
+            documentFiles: {
+                pfDocumentFront: string;
+                pfDocumentBack: string;
+                pfSelfieDocument: string;
+                pfBankProof: string;
+                pjLegalRepresentativeDocumentFront: string;
+                pjLegalRepresentativeDocumentBack: string;
+                pjSelfieDocument: string;
+                pjBankProof: string;
+                pjCnpjDocument: string;
+            };
             publicKey: string;
             secretKey: string;
             id: string;
@@ -96,7 +206,6 @@ export declare class UsersController {
             corporateName?: string;
             salesPageLink?: string;
             address?: import("./user.entity").AddressSnapshot;
-            documents?: import("./user.entity").DocumentsSnapshot;
             wallet: import("./user.entity").WalletSnapshot;
             fixedFee?: number;
             percentageFee?: number;
@@ -111,7 +220,35 @@ export declare class UsersController {
             hasPrev: boolean;
         };
     }>;
-    getUserById(id: string): Promise<{
+    getUserById(id: string, req?: Request): Promise<{
+        documents: {
+            pf: {
+                documentFront: string;
+                documentBack: string;
+                selfieWithDocument: string;
+                bankProof: string;
+            };
+            pj: {
+                legalRepresentativeDocumentFront: string;
+                legalRepresentativeDocumentBack: string;
+                legalRepresentativeSelfie: string;
+                bankProof: string;
+                cnpjDocument: string;
+            };
+            name?: string;
+            cpf?: string;
+        };
+        documentFiles: {
+            pfDocumentFront: string;
+            pfDocumentBack: string;
+            pfSelfieDocument: string;
+            pfBankProof: string;
+            pjLegalRepresentativeDocumentFront: string;
+            pjLegalRepresentativeDocumentBack: string;
+            pjSelfieDocument: string;
+            pjBankProof: string;
+            pjCnpjDocument: string;
+        };
         publicKey: string;
         secretKey: string;
         id: string;
@@ -126,13 +263,40 @@ export declare class UsersController {
         corporateName?: string;
         salesPageLink?: string;
         address?: import("./user.entity").AddressSnapshot;
-        documents?: import("./user.entity").DocumentsSnapshot;
         wallet: import("./user.entity").WalletSnapshot;
         fixedFee?: number;
         percentageFee?: number;
         notes?: string;
     }>;
-    updateUser(id: string, updateStatusDto: UpdateStatusDto): Promise<{
+    updateUser(id: string, updateStatusDto: UpdateStatusDto, req?: Request): Promise<{
+        documents: {
+            pf: {
+                documentFront: string;
+                documentBack: string;
+                selfieWithDocument: string;
+                bankProof: string;
+            };
+            pj: {
+                legalRepresentativeDocumentFront: string;
+                legalRepresentativeDocumentBack: string;
+                legalRepresentativeSelfie: string;
+                bankProof: string;
+                cnpjDocument: string;
+            };
+            name?: string;
+            cpf?: string;
+        };
+        documentFiles: {
+            pfDocumentFront: string;
+            pfDocumentBack: string;
+            pfSelfieDocument: string;
+            pfBankProof: string;
+            pjLegalRepresentativeDocumentFront: string;
+            pjLegalRepresentativeDocumentBack: string;
+            pjSelfieDocument: string;
+            pjBankProof: string;
+            pjCnpjDocument: string;
+        };
         publicKey: string;
         secretKey: string;
         id: string;
@@ -147,13 +311,40 @@ export declare class UsersController {
         corporateName?: string;
         salesPageLink?: string;
         address?: import("./user.entity").AddressSnapshot;
-        documents?: import("./user.entity").DocumentsSnapshot;
         wallet: import("./user.entity").WalletSnapshot;
         fixedFee?: number;
         percentageFee?: number;
         notes?: string;
     }>;
-    approveUser(id: string, approvalNotesDto: ApprovalNotesDto): Promise<{
+    approveUser(id: string, approvalNotesDto: ApprovalNotesDto, req?: Request): Promise<{
+        documents: {
+            pf: {
+                documentFront: string;
+                documentBack: string;
+                selfieWithDocument: string;
+                bankProof: string;
+            };
+            pj: {
+                legalRepresentativeDocumentFront: string;
+                legalRepresentativeDocumentBack: string;
+                legalRepresentativeSelfie: string;
+                bankProof: string;
+                cnpjDocument: string;
+            };
+            name?: string;
+            cpf?: string;
+        };
+        documentFiles: {
+            pfDocumentFront: string;
+            pfDocumentBack: string;
+            pfSelfieDocument: string;
+            pfBankProof: string;
+            pjLegalRepresentativeDocumentFront: string;
+            pjLegalRepresentativeDocumentBack: string;
+            pjSelfieDocument: string;
+            pjBankProof: string;
+            pjCnpjDocument: string;
+        };
         publicKey: string;
         secretKey: string;
         id: string;
@@ -168,13 +359,40 @@ export declare class UsersController {
         corporateName?: string;
         salesPageLink?: string;
         address?: import("./user.entity").AddressSnapshot;
-        documents?: import("./user.entity").DocumentsSnapshot;
         wallet: import("./user.entity").WalletSnapshot;
         fixedFee?: number;
         percentageFee?: number;
         notes?: string;
     }>;
-    rejectUser(id: string, rejectUserDto: RejectUserDto): Promise<{
+    rejectUser(id: string, rejectUserDto: RejectUserDto, req?: Request): Promise<{
+        documents: {
+            pf: {
+                documentFront: string;
+                documentBack: string;
+                selfieWithDocument: string;
+                bankProof: string;
+            };
+            pj: {
+                legalRepresentativeDocumentFront: string;
+                legalRepresentativeDocumentBack: string;
+                legalRepresentativeSelfie: string;
+                bankProof: string;
+                cnpjDocument: string;
+            };
+            name?: string;
+            cpf?: string;
+        };
+        documentFiles: {
+            pfDocumentFront: string;
+            pfDocumentBack: string;
+            pfSelfieDocument: string;
+            pfBankProof: string;
+            pjLegalRepresentativeDocumentFront: string;
+            pjLegalRepresentativeDocumentBack: string;
+            pjSelfieDocument: string;
+            pjBankProof: string;
+            pjCnpjDocument: string;
+        };
         publicKey: string;
         secretKey: string;
         id: string;
@@ -189,13 +407,40 @@ export declare class UsersController {
         corporateName?: string;
         salesPageLink?: string;
         address?: import("./user.entity").AddressSnapshot;
-        documents?: import("./user.entity").DocumentsSnapshot;
         wallet: import("./user.entity").WalletSnapshot;
         fixedFee?: number;
         percentageFee?: number;
         notes?: string;
     }>;
-    updateStatus(id: string, body: UpdateStatusDto): Promise<{
+    updateStatus(id: string, body: UpdateStatusDto, req?: Request): Promise<{
+        documents: {
+            pf: {
+                documentFront: string;
+                documentBack: string;
+                selfieWithDocument: string;
+                bankProof: string;
+            };
+            pj: {
+                legalRepresentativeDocumentFront: string;
+                legalRepresentativeDocumentBack: string;
+                legalRepresentativeSelfie: string;
+                bankProof: string;
+                cnpjDocument: string;
+            };
+            name?: string;
+            cpf?: string;
+        };
+        documentFiles: {
+            pfDocumentFront: string;
+            pfDocumentBack: string;
+            pfSelfieDocument: string;
+            pfBankProof: string;
+            pjLegalRepresentativeDocumentFront: string;
+            pjLegalRepresentativeDocumentBack: string;
+            pjSelfieDocument: string;
+            pjBankProof: string;
+            pjCnpjDocument: string;
+        };
         publicKey: string;
         secretKey: string;
         id: string;
@@ -210,7 +455,6 @@ export declare class UsersController {
         corporateName?: string;
         salesPageLink?: string;
         address?: import("./user.entity").AddressSnapshot;
-        documents?: import("./user.entity").DocumentsSnapshot;
         wallet: import("./user.entity").WalletSnapshot;
         fixedFee?: number;
         percentageFee?: number;
@@ -219,6 +463,10 @@ export declare class UsersController {
     private extractDocumentPaths;
     private resolveFilePath;
     private toResponse;
+    private buildDocumentsResponse;
+    private buildFileUrl;
+    private getBaseUrl;
+    private buildDocumentFiles;
 }
 type UploadedDocumentFiles = {
     [K in keyof DocumentUploadPaths]?: StoredFile[];
