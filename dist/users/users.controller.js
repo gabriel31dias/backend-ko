@@ -40,54 +40,54 @@ let UsersController = class UsersController {
     constructor(usersService) {
         this.usersService = usersService;
     }
-    async createUser(payload, files) {
+    async createUser(payload, files, req) {
         const documentPaths = this.extractDocumentPaths(files || {});
         const user = await this.usersService.createUser(payload, documentPaths);
-        return this.toResponse(user);
+        return this.toResponse(user, req);
     }
-    async updateFees(id, updateFeesDto) {
+    async updateFees(id, updateFeesDto, req) {
         const user = await this.usersService.updateFees(id, updateFeesDto);
-        return this.toResponse(user);
+        return this.toResponse(user, req);
     }
-    async getPendingSellers(page, limit) {
+    async getPendingSellers(page, limit, req) {
         const pageNum = parseInt(page || '1');
         const limitNum = parseInt(limit || '10');
         const result = await this.usersService.getPendingSellers(pageNum, limitNum);
         return {
-            sellers: result.sellers.map(user => this.toResponse(user)),
+            sellers: result.sellers.map(user => this.toResponse(user, req)),
             pagination: result.pagination,
         };
     }
-    async getUsers(page, limit, status, search) {
+    async getUsers(req, page, limit, status, search) {
         const parsedPage = parseInt(page !== null && page !== void 0 ? page : '1', 10);
         const parsedLimit = parseInt(limit !== null && limit !== void 0 ? limit : '10', 10);
         const pageNum = Number.isNaN(parsedPage) ? 1 : Math.max(parsedPage, 1);
         const limitNum = Number.isNaN(parsedLimit) ? 10 : Math.max(parsedLimit, 1);
         const result = await this.usersService.getUsers({ page: pageNum, limit: limitNum, status, search });
         return {
-            users: result.users.map(user => this.toResponse(user)),
+            users: result.users.map(user => this.toResponse(user, req)),
             pagination: result.pagination,
         };
     }
-    async getUserById(id) {
+    async getUserById(id, req) {
         const user = await this.usersService.findById(id);
-        return this.toResponse(user);
+        return this.toResponse(user, req);
     }
-    async updateUser(id, updateStatusDto) {
+    async updateUser(id, updateStatusDto, req) {
         const user = await this.usersService.updateStatus(id, updateStatusDto.status, { notes: updateStatusDto.notes });
-        return this.toResponse(user);
+        return this.toResponse(user, req);
     }
-    async approveUser(id, approvalNotesDto) {
+    async approveUser(id, approvalNotesDto, req) {
         const user = await this.usersService.updateStatus(id, 'approved', { notes: approvalNotesDto === null || approvalNotesDto === void 0 ? void 0 : approvalNotesDto.notes });
-        return this.toResponse(user);
+        return this.toResponse(user, req);
     }
-    async rejectUser(id, rejectUserDto) {
+    async rejectUser(id, rejectUserDto, req) {
         const user = await this.usersService.updateStatus(id, 'rejected', { notes: rejectUserDto.notes });
-        return this.toResponse(user);
+        return this.toResponse(user, req);
     }
-    async updateStatus(id, body) {
+    async updateStatus(id, body, req) {
         const user = await this.usersService.updateStatus(id, body.status, { notes: body.notes });
-        return this.toResponse(user);
+        return this.toResponse(user, req);
     }
     extractDocumentPaths(files) {
         return {
@@ -113,9 +113,60 @@ let UsersController = class UsersController {
         }
         return (0, path_1.join)('uploads', 'users', file.filename);
     }
-    toResponse(user) {
+    toResponse(user, req) {
         const { password } = user, rest = __rest(user, ["password"]);
-        return Object.assign(Object.assign({}, rest), { publicKey: user.publicKey, secretKey: user.secretKey });
+        return Object.assign(Object.assign({}, rest), { documents: this.buildDocumentsResponse(user.documents, req), documentFiles: this.buildDocumentFiles(user.documents, req), publicKey: user.publicKey, secretKey: user.secretKey });
+    }
+    buildDocumentsResponse(documents, req) {
+        if (!documents) {
+            return undefined;
+        }
+        const pf = documents.pf
+            ? Object.assign(Object.assign({}, documents.pf), { documentFront: this.buildFileUrl(documents.pf.documentFront, req), documentBack: this.buildFileUrl(documents.pf.documentBack, req), selfieWithDocument: this.buildFileUrl(documents.pf.selfieWithDocument, req), bankProof: this.buildFileUrl(documents.pf.bankProof, req) }) : undefined;
+        const pj = documents.pj
+            ? Object.assign(Object.assign({}, documents.pj), { legalRepresentativeDocumentFront: this.buildFileUrl(documents.pj.legalRepresentativeDocumentFront, req), legalRepresentativeDocumentBack: this.buildFileUrl(documents.pj.legalRepresentativeDocumentBack, req), legalRepresentativeSelfie: this.buildFileUrl(documents.pj.legalRepresentativeSelfie, req), bankProof: this.buildFileUrl(documents.pj.bankProof, req), cnpjDocument: this.buildFileUrl(documents.pj.cnpjDocument, req) }) : undefined;
+        return Object.assign(Object.assign({}, documents), { pf,
+            pj });
+    }
+    buildFileUrl(filePath, req) {
+        if (!filePath) {
+            return undefined;
+        }
+        if (/^https?:\/\//i.test(filePath)) {
+            return filePath;
+        }
+        const sanitizedPath = filePath.replace(/\\/g, '/').replace(/^\/+/, '');
+        const baseUrl = this.getBaseUrl(req);
+        return `${baseUrl}/${sanitizedPath}`;
+    }
+    getBaseUrl(req) {
+        const configuredBase = process.env.FILE_BASE_URL || process.env.APP_URL;
+        if (configuredBase) {
+            return configuredBase.replace(/\/+$/, '');
+        }
+        if (req) {
+            const protocol = req.protocol;
+            const host = req.get('host');
+            if (host) {
+                return `${protocol}://${host}`.replace(/\/+$/, '');
+            }
+        }
+        const port = process.env.PORT || '3000';
+        return `http://localhost:${port}`.replace(/\/+$/, '');
+    }
+    buildDocumentFiles(documents, req) {
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t;
+        return {
+            pfDocumentFront: (_b = this.buildFileUrl((_a = documents === null || documents === void 0 ? void 0 : documents.pf) === null || _a === void 0 ? void 0 : _a.documentFront, req)) !== null && _b !== void 0 ? _b : null,
+            pfDocumentBack: (_d = this.buildFileUrl((_c = documents === null || documents === void 0 ? void 0 : documents.pf) === null || _c === void 0 ? void 0 : _c.documentBack, req)) !== null && _d !== void 0 ? _d : null,
+            pfSelfieDocument: (_f = this.buildFileUrl((_e = documents === null || documents === void 0 ? void 0 : documents.pf) === null || _e === void 0 ? void 0 : _e.selfieWithDocument, req)) !== null && _f !== void 0 ? _f : null,
+            pfBankProof: (_h = this.buildFileUrl((_g = documents === null || documents === void 0 ? void 0 : documents.pf) === null || _g === void 0 ? void 0 : _g.bankProof, req)) !== null && _h !== void 0 ? _h : null,
+            pjLegalRepresentativeDocumentFront: (_k = this.buildFileUrl((_j = documents === null || documents === void 0 ? void 0 : documents.pj) === null || _j === void 0 ? void 0 : _j.legalRepresentativeDocumentFront, req)) !== null && _k !== void 0 ? _k : null,
+            pjLegalRepresentativeDocumentBack: (_m = this.buildFileUrl((_l = documents === null || documents === void 0 ? void 0 : documents.pj) === null || _l === void 0 ? void 0 : _l.legalRepresentativeDocumentBack, req)) !== null && _m !== void 0 ? _m : null,
+            pjSelfieDocument: (_p = this.buildFileUrl((_o = documents === null || documents === void 0 ? void 0 : documents.pj) === null || _o === void 0 ? void 0 : _o.legalRepresentativeSelfie, req)) !== null && _p !== void 0 ? _p : null,
+            pjBankProof: (_r = this.buildFileUrl((_q = documents === null || documents === void 0 ? void 0 : documents.pj) === null || _q === void 0 ? void 0 : _q.bankProof, req)) !== null && _r !== void 0 ? _r : null,
+            pjCnpjDocument: (_t = this.buildFileUrl((_s = documents === null || documents === void 0 ? void 0 : documents.pj) === null || _s === void 0 ? void 0 : _s.cnpjDocument, req)) !== null && _t !== void 0 ? _t : null,
+        };
     }
 };
 exports.UsersController = UsersController;
@@ -154,73 +205,82 @@ __decorate([
     })),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.UploadedFiles)()),
+    __param(2, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_user_dto_1.CreateUserDto, Object]),
+    __metadata("design:paramtypes", [create_user_dto_1.CreateUserDto, Object, Object]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "createUser", null);
 __decorate([
     (0, common_1.Put)(':id/fees'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, update_fees_dto_1.UpdateFeesDto]),
+    __metadata("design:paramtypes", [String, update_fees_dto_1.UpdateFeesDto, Object]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "updateFees", null);
 __decorate([
     (0, common_1.Get)('sellers/pending'),
     __param(0, (0, common_1.Query)('page')),
     __param(1, (0, common_1.Query)('limit')),
+    __param(2, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String]),
+    __metadata("design:paramtypes", [String, String, Object]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "getPendingSellers", null);
 __decorate([
     (0, common_1.Get)(),
-    __param(0, (0, common_1.Query)('page')),
-    __param(1, (0, common_1.Query)('limit')),
-    __param(2, (0, common_1.Query)('status')),
-    __param(3, (0, common_1.Query)('search')),
+    __param(0, (0, common_1.Req)()),
+    __param(1, (0, common_1.Query)('page')),
+    __param(2, (0, common_1.Query)('limit')),
+    __param(3, (0, common_1.Query)('status')),
+    __param(4, (0, common_1.Query)('search')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, String, String, String]),
+    __metadata("design:paramtypes", [Object, String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "getUsers", null);
 __decorate([
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "getUserById", null);
 __decorate([
     (0, common_1.Patch)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, update_status_dto_1.UpdateStatusDto]),
+    __metadata("design:paramtypes", [String, update_status_dto_1.UpdateStatusDto, Object]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "updateUser", null);
 __decorate([
     (0, common_1.Patch)(':id/approve'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, approval_notes_dto_1.ApprovalNotesDto]),
+    __metadata("design:paramtypes", [String, approval_notes_dto_1.ApprovalNotesDto, Object]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "approveUser", null);
 __decorate([
     (0, common_1.Patch)(':id/reject'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, reject_user_dto_1.RejectUserDto]),
+    __metadata("design:paramtypes", [String, reject_user_dto_1.RejectUserDto, Object]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "rejectUser", null);
 __decorate([
     (0, common_1.Put)(':id/status'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
+    __param(2, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, update_status_dto_1.UpdateStatusDto]),
+    __metadata("design:paramtypes", [String, update_status_dto_1.UpdateStatusDto, Object]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "updateStatus", null);
 exports.UsersController = UsersController = __decorate([
