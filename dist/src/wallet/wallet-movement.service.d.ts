@@ -1,0 +1,32 @@
+import { PrismaService } from '../prisma/prisma.service';
+import { WalletMovement, WalletStatement } from './entities/wallet-movement.entity';
+import { SettingsService } from '../settings/settings.service';
+export declare class WalletMovementService {
+    private readonly prisma;
+    private readonly settingsService;
+    constructor(prisma: PrismaService, settingsService: SettingsService);
+    createMovement(data: {
+        userId: string;
+        type: 'credit' | 'debit';
+        category: 'transaction_credit' | 'transaction_fee' | 'withdrawal' | 'refund' | 'adjustment';
+        amount: number;
+        description?: string;
+        referenceType?: 'transaction' | 'withdrawal' | 'manual';
+        referenceId?: string;
+        metadata?: any;
+    }): Promise<WalletMovement>;
+    createTransactionMovements(userId: string, transactionId: string, grossAmount: number, netAmount: number, fees: {
+        fixedFeeAmount: number;
+        percentageFeeAmount: number;
+        totalFees: number;
+    }): Promise<WalletMovement[]>;
+    getStatement(userId: string, options?: {
+        from?: Date;
+        to?: Date;
+        limit?: number;
+        category?: string;
+    }): Promise<WalletStatement>;
+    getMovementsByTransaction(transactionId: string): Promise<WalletMovement[]>;
+    private toDomain;
+}
+//# sourceMappingURL=wallet-movement.service.d.ts.map
