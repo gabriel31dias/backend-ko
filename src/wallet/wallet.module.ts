@@ -1,12 +1,13 @@
 import { Module } from '@nestjs/common';
 import { UsersModule } from '../users/users.module';
 import { PrismaModule } from '../prisma/prisma.module';
+import { SettingsModule } from '../settings/settings.module';
 import { WalletController } from './wallet.controller';
 import { WalletService } from './wallet.service';
 import { WalletMovementService } from './wallet-movement.service';
 
 @Module({
-  imports: [UsersModule, PrismaModule],
+  imports: [UsersModule, PrismaModule, SettingsModule],
   controllers: [WalletController],
   providers: [WalletService, WalletMovementService],
   exports: [WalletService, WalletMovementService],

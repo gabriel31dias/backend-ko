@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { WalletMovementService } from '../wallet/wallet-movement.service';
 import { SettingsService } from '../settings/settings.service';
+import { ApiKeysService } from '../api-keys/api-keys.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { PaginationQueryDto } from './dto/pagination-query.dto';
 import { Transaction, TransactionResponse } from './entities/transaction.entity';
@@ -35,23 +36,24 @@ export class TransactionsService {
     private readonly usersService: UsersService,
     private readonly walletMovementService: WalletMovementService,
     private readonly settingsService: SettingsService,
+    private readonly apiKeysService: ApiKeysService,
   ) {}
 
   async processTransaction(dto: CreateTransactionDto): Promise<TransactionResponse> {
     // 1. Validar credenciais e encontrar usuário
-    const user = await this.validateApiCredentials(dto.publicKey, dto.secretKey);
+    const { userId } = await this.apiKeysService.validateApiCredentials(dto.publicKey, dto.secretKey);
     
     // 2. Processar via adquirente (mock)
     const adquirenteResponse = await this.mockAdquirenteProcess(dto);
     
     // 3. Criar transação no banco
-    const transaction = await this.createTransaction(dto, user.id, adquirenteResponse);
+    const transaction = await this.createTransaction(dto, userId, adquirenteResponse);
     
     // 4. PIX não atualiza carteira imediatamente (só via webhook)
     // Cartão atualiza imediatamente se aprovado
     let feeSummary: FeesResult | undefined;
     if (dto.paymentMethod === 'card' && adquirenteResponse.status === 'approved') {
-      feeSummary = await this.updateUserWallet(user.id, dto.amount, adquirenteResponse.transactionId);
+      feeSummary = await this.updateUserWallet(userId, dto.amount, adquirenteResponse.transactionId);
 
       if (feeSummary) {
         transaction.grossAmount = feeSummary.grossAmount;
@@ -73,21 +75,6 @@ export class TransactionsService {
     };
   }
 
-  private async validateApiCredentials(publicKey: string, secretKey: string) {
-    // Procurar usuário com essas credenciais
-    const user = await this.prisma.user.findFirst({
-      where: {
-        publicKey,
-        secretKey,
-      },
-    });
-
-    if (!user) {
-      throw new BadRequestException('Credenciais de API inválidas');
-    }
-
-    return user;
-  }
 
   private async mockAdquirenteProcess(dto: CreateTransactionDto): Promise<MockAdquirenteResponse> {
     // Mock de resposta das adquirentes

@@ -1,10 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { WalletMovement, WalletStatement } from './entities/wallet-movement.entity';
+import { SettingsService } from '../settings/settings.service';
 
 @Injectable()
 export class WalletMovementService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly settingsService: SettingsService,
+  ) {}
 
   async createMovement(data: {
     userId: string;
@@ -128,6 +132,9 @@ export class WalletMovementService {
       take: options?.limit || 100,
     });
 
+    // Buscar taxas efetivas do usuário
+    const effectiveFees = await this.settingsService.getUserEffectiveFees(userId);
+
     // Calcular resumo
     const totalCredits = movements
       .filter(m => m.type === 'credit')
@@ -145,8 +152,24 @@ export class WalletMovementService {
       select: { walletBalance: true },
     });
 
+    // Processar movimentações e adicionar descrições com taxas
+    const enhancedMovements = movements.map(m => {
+      const domainMovement = this.toDomain(m);
+      
+      // Se for uma taxa de transação e não tem descrição de taxa, adicionar
+      if (domainMovement.category === 'transaction_fee' && (!domainMovement.description || !domainMovement.description.includes('Taxa de transação'))) {
+        const fixedFeeAmount = effectiveFees.fixedFee;
+        const percentageFeeAmount = domainMovement.metadata?.percentageFee || 
+          (domainMovement.metadata?.grossAmount ? (domainMovement.metadata.grossAmount * effectiveFees.percentageFee) / 100 : 0);
+        
+        domainMovement.description = `Taxa de transação (Fixa: R$ ${fixedFeeAmount.toFixed(2)} + Percentual: R$ ${percentageFeeAmount.toFixed(2)})`;
+      }
+      
+      return domainMovement;
+    });
+
     return {
-      movements: movements.map(m => this.toDomain(m)),
+      movements: enhancedMovements,
       summary: {
         totalCredits,
         totalDebits,

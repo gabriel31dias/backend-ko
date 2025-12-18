@@ -46,7 +46,7 @@ model User {
   walletValorReceber Float   @default(0)
   walletGrossBalance Float   @default(0)
   walletCurrency    String   @default("BRL")
-  // Chaves da API para pagamentos
+  // Chaves da API para pagamentos (deprecated - usar ApiKey model)
   publicKey         String?
   secretKey         String?
   // Token de autenticação para sessão
@@ -59,6 +59,25 @@ model User {
   // Relacionamentos
   transactions      Transaction[]
   walletMovements   WalletMovement[]
+  webhooks          Webhook[]
+  apiKeys           ApiKey[]
+}
+
+model ApiKey {
+  id          String   @id @default(uuid())
+  name        String   // Nome/descrição da chave
+  publicKey   String   @unique
+  secretKey   String   @unique
+  isActive    Boolean  @default(true)
+  lastUsedAt  DateTime?
+  expiresAt   DateTime? // Opcional: data de expiração
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([publicKey, secretKey])
 }
 
 model PaymentLink {
@@ -164,4 +183,47 @@ model GlobalSettings {
   description      String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+}
+
+model Webhook {
+  id                    String   @id @default(uuid())
+  userId                String
+  user                  User     @relation(fields: [userId], references: [id])
+  url                   String   // URL do webhook
+  description           String?  // Descrição do webhook
+  // Eventos habilitados
+  eventPaymentCreated   Boolean  @default(false) // Pagamento criado
+  eventPaymentCompleted Boolean  @default(false) // Pagamento concluído
+  eventWithdrawCompleted Boolean @default(false) // Saque concluído
+  eventRefund           Boolean  @default(false) // Estorno
+  // Status e configurações
+  isActive              Boolean  @default(true)
+  secretKey             String?  // Chave secreta para validar webhook
+  maxRetries            Int      @default(3)
+  timeoutSeconds        Int      @default(30)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  // Relacionamentos
+  deliveries            WebhookDelivery[]
+  
+  @@index([userId])
+}
+
+model WebhookDelivery {
+  id            String   @id @default(uuid())
+  webhookId     String
+  webhook       Webhook  @relation(fields: [webhookId], references: [id])
+  eventType     String   // 'payment_created', 'payment_completed', 'withdraw_completed', 'refund'
+  payload       Json     // Dados enviados no webhook
+  responseCode  Int?     // HTTP response code recebido
+  responseBody  String?  // Resposta do servidor
+  success       Boolean  @default(false)
+  attempts      Int      @default(0)
+  lastAttempt   DateTime?
+  nextRetry     DateTime?
+  createdAt     DateTime @default(now())
+  
+  @@index([webhookId, createdAt])
+  @@index([eventType])
 }

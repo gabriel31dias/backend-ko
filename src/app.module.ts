@@ -8,12 +8,15 @@ import { WalletModule } from './wallet/wallet.module';
 import { PaymentLinksModule } from './payment-links/payment-links.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { SettingsModule } from './settings/settings.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { ApiKeysModule } from './api-keys/api-keys.module';
+import { AdminModule } from './admin/admin.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
 @Module({
-  imports: [PrismaModule, UsersModule, AuthModule, WalletModule, PaymentLinksModule, TransactionsModule, SettingsModule, DashboardModule],
+  imports: [PrismaModule, UsersModule, AuthModule, WalletModule, PaymentLinksModule, TransactionsModule, SettingsModule, WebhooksModule, DashboardModule, ApiKeysModule, AdminModule],
   controllers: [AppController],
   providers: [
     AppService,
