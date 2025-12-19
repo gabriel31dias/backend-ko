@@ -12,6 +12,7 @@ import { RejectUserDto } from './dto/reject-user.dto';
 import { User } from './user.entity';
 import { DocumentUploadPaths, UsersService } from './users.service';
 import { Public } from '../auth/public.decorator';
+import { CurrentUser } from '../auth/user.decorator';
 
 @Controller('users')
 export class UsersController {
@@ -121,6 +122,22 @@ export class UsersController {
   async updateStatus(@Param('id') id: string, @Body() body: UpdateStatusDto, @Req() req?: Request) {
     const user = await this.usersService.updateStatus(id, body.status, { notes: body.notes });
     return this.toResponse(user, req);
+  }
+
+  @Get('me/rejected-documents')
+  async getMyRejectedDocuments(@CurrentUser() user: any, @Req() req?: Request) {
+    const rejectedInfo = await this.usersService.getUserRejectedDocuments(user.id);
+    
+    // Build URLs for available documents
+    const documentUrls = {};
+    rejectedInfo.availableDocuments.forEach(doc => {
+      documentUrls[doc.type] = this.buildFileUrl(doc.path, req);
+    });
+    
+    return {
+      ...rejectedInfo,
+      documentsUrls: documentUrls,
+    };
   }
 
   private extractDocumentPaths(files: UploadedDocumentFiles): DocumentUploadPaths {

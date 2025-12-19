@@ -460,6 +460,27 @@ export declare class UsersController {
         percentageFee?: number;
         notes?: string;
     }>;
+    getMyRejectedDocuments(user: any, req?: Request): Promise<{
+        documentsUrls: {};
+        user: {
+            id: string;
+            name: string;
+            email: string;
+            status: string;
+            lastUpdate: Date;
+        };
+        isRejected: boolean;
+        rejectionNotes: string;
+        rejectedDocuments: any[];
+        missingDocuments: any[];
+        availableDocuments: any[];
+        summary: {
+            total: number;
+            available: number;
+            missing: number;
+            rejected: number;
+        };
+    }>;
     private extractDocumentPaths;
     private resolveFilePath;
     private toResponse;

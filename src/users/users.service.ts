@@ -383,4 +383,109 @@ export class UsersService {
       },
     };
   }
+
+  async getUserRejectedDocuments(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        status: true,
+        notes: true,
+        updatedAt: true,
+        pfDocumentFrontPath: true,
+        pfDocumentBackPath: true,
+        pfSelfieDocumentPath: true,
+        pfBankProofPath: true,
+        legalRepresentativeDocumentFrontPath: true,
+        legalRepresentativeDocumentBackPath: true,
+        legalRepresentativeSelfiePath: true,
+        pjBankProofPath: true,
+        cnpjDocumentPath: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
+
+    const missingDocuments = [];
+    const availableDocuments = [];
+
+    const documentMapping = [
+      { key: 'pfDocumentFrontPath', type: 'pfDocumentFront', name: 'CPF/RG Frente' },
+      { key: 'pfDocumentBackPath', type: 'pfDocumentBack', name: 'CPF/RG Verso' },
+      { key: 'pfSelfieDocumentPath', type: 'pfSelfieDocument', name: 'Selfie com Documento' },
+      { key: 'pfBankProofPath', type: 'pfBankProof', name: 'Comprovante Bancário PF' },
+      { key: 'legalRepresentativeDocumentFrontPath', type: 'pjLegalRepresentativeDocumentFront', name: 'Documento Rep. Legal Frente' },
+      { key: 'legalRepresentativeDocumentBackPath', type: 'pjLegalRepresentativeDocumentBack', name: 'Documento Rep. Legal Verso' },
+      { key: 'legalRepresentativeSelfiePath', type: 'pjSelfieDocument', name: 'Selfie Rep. Legal' },
+      { key: 'pjBankProofPath', type: 'pjBankProof', name: 'Comprovante Bancário PJ' },
+      { key: 'cnpjDocumentPath', type: 'pjCnpjDocument', name: 'Documento CNPJ' },
+    ];
+
+    documentMapping.forEach(doc => {
+      const path = user[doc.key as keyof typeof user] as string;
+      if (path) {
+        availableDocuments.push({
+          type: doc.type,
+          name: doc.name,
+          path: path,
+          status: 'available'
+        });
+      } else {
+        missingDocuments.push({
+          type: doc.type,
+          name: doc.name,
+          status: 'missing'
+        });
+      }
+    });
+
+    // Parse rejection notes to find rejected documents
+    const rejectedDocuments = this.parseRejectionNotes(user.notes);
+
+    return {
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        status: user.status,
+        lastUpdate: user.updatedAt,
+      },
+      isRejected: user.status === 'rejected',
+      rejectionNotes: user.notes,
+      rejectedDocuments: rejectedDocuments,
+      missingDocuments: missingDocuments,
+      availableDocuments: availableDocuments,
+      summary: {
+        total: documentMapping.length,
+        available: availableDocuments.length,
+        missing: missingDocuments.length,
+        rejected: rejectedDocuments.length,
+      },
+    };
+  }
+
+  private parseRejectionNotes(notes: string | null): any[] {
+    if (!notes || !notes.includes('Documentos rejeitados pelo administrador')) {
+      return [];
+    }
+
+    const rejectedDocs = [];
+    const lines = notes.split('\n');
+    
+    for (const line of lines) {
+      if (line.trim().startsWith('- ')) {
+        const docName = line.trim().substring(2);
+        rejectedDocs.push({
+          name: docName,
+          status: 'rejected'
+        });
+      }
+    }
+
+    return rejectedDocs;
+  }
 }
