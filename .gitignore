@@ -3,3 +3,6 @@ node_modules
 .env
 
 /generated/prisma
+
+# Upload files - keep out of version control
+uploads/
