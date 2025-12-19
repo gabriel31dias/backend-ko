@@ -11,26 +11,32 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
-const crypto_1 = require("crypto");
+const jwt_1 = require("@nestjs/jwt");
 const users_service_1 = require("../users/users.service");
 let AuthService = class AuthService {
-    constructor(usersService) {
+    constructor(usersService, jwtService) {
         this.usersService = usersService;
+        this.jwtService = jwtService;
     }
     async login(email, password) {
         const user = await this.usersService.validateCredentials(email, password);
-        const accessToken = (0, crypto_1.randomUUID)();
-        const userWithKeysAndToken = await this.usersService.ensureApiKeysAndToken(user, accessToken);
+        const payload = {
+            sub: user.id,
+            email: user.email,
+            name: user.name
+        };
+        const accessToken = this.jwtService.sign(payload);
+        const userWithKeys = await this.usersService.ensureApiKeysAndToken(user, accessToken);
         return {
             accessToken,
             user: {
-                id: userWithKeysAndToken.id,
-                name: userWithKeysAndToken.name,
-                email: userWithKeysAndToken.email,
-                status: userWithKeysAndToken.status,
-                wallet: userWithKeysAndToken.wallet,
-                publicKey: userWithKeysAndToken.publicKey,
-                secretKey: userWithKeysAndToken.secretKey,
+                id: userWithKeys.id,
+                name: userWithKeys.name,
+                email: userWithKeys.email,
+                status: userWithKeys.status,
+                wallet: userWithKeys.wallet,
+                publicKey: userWithKeys.publicKey,
+                secretKey: userWithKeys.secretKey,
             },
         };
     }
@@ -38,6 +44,7 @@ let AuthService = class AuthService {
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [users_service_1.UsersService])
+    __metadata("design:paramtypes", [users_service_1.UsersService,
+        jwt_1.JwtService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map

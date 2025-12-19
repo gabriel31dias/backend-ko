@@ -4,12 +4,14 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { Reflector } from '@nestjs/core';
 import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(
+    private readonly jwtService: JwtService,
     private readonly usersService: UsersService,
     private readonly reflector: Reflector,
   ) {}
@@ -33,10 +35,13 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     try {
-      // Buscar usuário pelo token (accessToken)
-      const user = await this.usersService.findByToken(token);
+      // Verificar e decodificar o JWT
+      const payload = this.jwtService.verify(token);
+      
+      // Buscar usuário pelo ID do payload
+      const user = await this.usersService.findById(payload.sub);
       if (!user) {
-        throw new UnauthorizedException('Token inválido');
+        throw new UnauthorizedException('Usuário não encontrado');
       }
       
       request['user'] = user;
@@ -44,7 +49,7 @@ export class JwtAuthGuard implements CanActivate {
       if (error instanceof UnauthorizedException) {
         throw error;
       }
-      throw new UnauthorizedException('Erro ao validar token');
+      throw new UnauthorizedException('Token inválido ou expirado');
     }
     
     return true;
