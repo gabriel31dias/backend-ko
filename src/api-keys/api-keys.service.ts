@@ -62,68 +62,82 @@ export class ApiKeysService {
   }
 
   async findAllPaginated(userId: string, query: ApiKeysPaginationQueryDto): Promise<PaginatedApiKeys> {
-    const page = parseInt(query.page || '1');
-    const limit = parseInt(query.limit || '10');
-    const skip = (page - 1) * limit;
+    try {
+      const page = parseInt(query.page || '1');
+      const limit = parseInt(query.limit || '10');
+      const skip = (page - 1) * limit;
 
-    const where: any = {
-      userId,
-    };
+      const where: any = {
+        userId,
+      };
 
-    if (query.isActive !== undefined) {
-      where.isActive = query.isActive === 'true';
-    }
+      if (query.isActive !== undefined) {
+        where.isActive = query.isActive === 'true';
+      }
 
-    if (query.search) {
-      where.OR = [
-        {
-          name: {
-            contains: query.search,
-            mode: 'insensitive',
+      if (query.search) {
+        where.OR = [
+          {
+            name: {
+              contains: query.search,
+              mode: 'insensitive',
+            },
           },
-        },
-        {
-          publicKey: {
-            contains: query.search,
-            mode: 'insensitive',
+          {
+            publicKey: {
+              contains: query.search,
+              mode: 'insensitive',
+            },
           },
+        ];
+      }
+
+      // Configurar ordenação
+      const sortBy = query.sortBy || 'createdAt';
+      const sortOrder = query.sortOrder || 'desc';
+      
+      let orderBy: any = { createdAt: 'desc' };
+      if (['createdAt', 'name', 'lastUsedAt', 'expiresAt'].includes(sortBy)) {
+        orderBy = { [sortBy]: sortOrder };
+      }
+
+      const [apiKeys, total] = await Promise.all([
+        this.prisma.apiKey.findMany({
+          where,
+          orderBy,
+          skip,
+          take: limit,
+        }),
+        this.prisma.apiKey.count({ where }),
+      ]);
+
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        apiKeys: apiKeys.map(key => ({
+          id: key.id,
+          name: key.name,
+          publicKey: key.publicKey,
+          // Não retorna secretKey na listagem
+          isActive: key.isActive,
+          lastUsedAt: key.lastUsedAt,
+          expiresAt: key.expiresAt,
+          createdAt: key.createdAt,
+          updatedAt: key.updatedAt,
+        })),
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+          hasNext: page < totalPages,
+          hasPrev: page > 1,
         },
-      ];
+      };
+    } catch (error) {
+      console.error('Error in findAllPaginated:', error);
+      throw error;
     }
-
-    const [apiKeys, total] = await Promise.all([
-      this.prisma.apiKey.findMany({
-        where,
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit,
-      }),
-      this.prisma.apiKey.count({ where }),
-    ]);
-
-    const totalPages = Math.ceil(total / limit);
-
-    return {
-      apiKeys: apiKeys.map(key => ({
-        id: key.id,
-        name: key.name,
-        publicKey: key.publicKey,
-        // Não retorna secretKey na listagem
-        isActive: key.isActive,
-        lastUsedAt: key.lastUsedAt,
-        expiresAt: key.expiresAt,
-        createdAt: key.createdAt,
-        updatedAt: key.updatedAt,
-      })),
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages,
-        hasNext: page < totalPages,
-        hasPrev: page > 1,
-      },
-    };
   }
 
   async findOne(userId: string, id: string): Promise<ApiKeyResponse> {

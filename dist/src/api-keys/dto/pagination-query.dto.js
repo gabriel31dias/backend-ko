@@ -34,4 +34,14 @@ __decorate([
     (0, class_validator_1.IsIn)(['true', 'false']),
     __metadata("design:type", String)
 ], ApiKeysPaginationQueryDto.prototype, "isActive", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsIn)(['createdAt', 'name', 'lastUsedAt', 'expiresAt']),
+    __metadata("design:type", String)
+], ApiKeysPaginationQueryDto.prototype, "sortBy", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsIn)(['asc', 'desc']),
+    __metadata("design:type", String)
+], ApiKeysPaginationQueryDto.prototype, "sortOrder", void 0);
 //# sourceMappingURL=pagination-query.dto.js.map

@@ -36,6 +36,7 @@ const approval_notes_dto_1 = require("./dto/approval-notes.dto");
 const reject_user_dto_1 = require("./dto/reject-user.dto");
 const users_service_1 = require("./users.service");
 const public_decorator_1 = require("../auth/public.decorator");
+const user_decorator_1 = require("../auth/user.decorator");
 let UsersController = class UsersController {
     constructor(usersService) {
         this.usersService = usersService;
@@ -88,6 +89,14 @@ let UsersController = class UsersController {
     async updateStatus(id, body, req) {
         const user = await this.usersService.updateStatus(id, body.status, { notes: body.notes });
         return this.toResponse(user, req);
+    }
+    async getMyRejectedDocuments(user, req) {
+        const rejectedInfo = await this.usersService.getUserRejectedDocuments(user.id);
+        const documentUrls = {};
+        rejectedInfo.availableDocuments.forEach(doc => {
+            documentUrls[doc.type] = this.buildFileUrl(doc.path, req);
+        });
+        return Object.assign(Object.assign({}, rejectedInfo), { documentsUrls: documentUrls });
     }
     extractDocumentPaths(files) {
         return {
@@ -283,6 +292,14 @@ __decorate([
     __metadata("design:paramtypes", [String, update_status_dto_1.UpdateStatusDto, Object]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "updateStatus", null);
+__decorate([
+    (0, common_1.Get)('me/rejected-documents'),
+    __param(0, (0, user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Req)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, Object]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "getMyRejectedDocuments", null);
 exports.UsersController = UsersController = __decorate([
     (0, common_1.Controller)('users'),
     __metadata("design:paramtypes", [users_service_1.UsersService])

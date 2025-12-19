@@ -62,5 +62,26 @@ export declare class UsersService {
             hasPrev: boolean;
         };
     }>;
+    getUserRejectedDocuments(userId: string): Promise<{
+        user: {
+            id: string;
+            name: string;
+            email: string;
+            status: string;
+            lastUpdate: Date;
+        };
+        isRejected: boolean;
+        rejectionNotes: string;
+        rejectedDocuments: any[];
+        missingDocuments: any[];
+        availableDocuments: any[];
+        summary: {
+            total: number;
+            available: number;
+            missing: number;
+            rejected: number;
+        };
+    }>;
+    private parseRejectionNotes;
 }
 //# sourceMappingURL=users.service.d.ts.map

@@ -3,5 +3,7 @@ export declare class ApiKeysPaginationQueryDto {
     limit?: string;
     search?: string;
     isActive?: string;
+    sortBy?: string;
+    sortOrder?: string;
 }
 //# sourceMappingURL=pagination-query.dto.d.ts.map

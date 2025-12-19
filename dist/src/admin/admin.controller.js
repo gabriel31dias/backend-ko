@@ -17,6 +17,8 @@ const common_1 = require("@nestjs/common");
 const admin_service_1 = require("./admin.service");
 const dashboard_metrics_query_dto_1 = require("./dto/dashboard-metrics-query.dto");
 const admin_transactions_query_dto_1 = require("./dto/admin-transactions-query.dto");
+const reject_documents_dto_1 = require("./dto/reject-documents.dto");
+const documents_query_dto_1 = require("./dto/documents-query.dto");
 let AdminController = class AdminController {
     constructor(adminService) {
         this.adminService = adminService;
@@ -29,6 +31,12 @@ let AdminController = class AdminController {
     }
     async getRecentTransactions() {
         return this.adminService.getRecentTransactions();
+    }
+    async getAllDocuments(query) {
+        return this.adminService.getAllDocuments(query);
+    }
+    async rejectUserDocuments(rejectDocumentsDto) {
+        return this.adminService.rejectUserDocuments(rejectDocumentsDto.users);
     }
 };
 exports.AdminController = AdminController;
@@ -52,6 +60,20 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "getRecentTransactions", null);
+__decorate([
+    (0, common_1.Get)('documents'),
+    __param(0, (0, common_1.Query)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [documents_query_dto_1.DocumentsQueryDto]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "getAllDocuments", null);
+__decorate([
+    (0, common_1.Post)('documents/reject'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [reject_documents_dto_1.RejectDocumentsDto]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "rejectUserDocuments", null);
 exports.AdminController = AdminController = __decorate([
     (0, common_1.Controller)('admin'),
     __metadata("design:paramtypes", [admin_service_1.AdminService])

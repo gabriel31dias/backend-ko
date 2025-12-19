@@ -16,4 +16,12 @@ export class ApiKeysPaginationQueryDto {
   @IsOptional()
   @IsIn(['true', 'false'])
   isActive?: string;
+
+  @IsOptional()
+  @IsIn(['createdAt', 'name', 'lastUsedAt', 'expiresAt'])
+  sortBy?: string;
+
+  @IsOptional()
+  @IsIn(['asc', 'desc'])
+  sortOrder?: string;
 }
