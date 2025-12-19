@@ -11,10 +11,12 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.JwtAuthGuard = void 0;
 const common_1 = require("@nestjs/common");
+const jwt_1 = require("@nestjs/jwt");
 const core_1 = require("@nestjs/core");
 const users_service_1 = require("../users/users.service");
 let JwtAuthGuard = class JwtAuthGuard {
-    constructor(usersService, reflector) {
+    constructor(jwtService, usersService, reflector) {
+        this.jwtService = jwtService;
         this.usersService = usersService;
         this.reflector = reflector;
     }
@@ -32,9 +34,10 @@ let JwtAuthGuard = class JwtAuthGuard {
             throw new common_1.UnauthorizedException('Token não fornecido');
         }
         try {
-            const user = await this.usersService.findByToken(token);
+            const payload = this.jwtService.verify(token);
+            const user = await this.usersService.findById(payload.sub);
             if (!user) {
-                throw new common_1.UnauthorizedException('Token inválido');
+                throw new common_1.UnauthorizedException('Usuário não encontrado');
             }
             request['user'] = user;
         }
@@ -42,7 +45,7 @@ let JwtAuthGuard = class JwtAuthGuard {
             if (error instanceof common_1.UnauthorizedException) {
                 throw error;
             }
-            throw new common_1.UnauthorizedException('Erro ao validar token');
+            throw new common_1.UnauthorizedException('Token inválido ou expirado');
         }
         return true;
     }
@@ -55,7 +58,8 @@ let JwtAuthGuard = class JwtAuthGuard {
 exports.JwtAuthGuard = JwtAuthGuard;
 exports.JwtAuthGuard = JwtAuthGuard = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [users_service_1.UsersService,
+    __metadata("design:paramtypes", [jwt_1.JwtService,
+        users_service_1.UsersService,
         core_1.Reflector])
 ], JwtAuthGuard);
 //# sourceMappingURL=jwt-auth.guard.js.map

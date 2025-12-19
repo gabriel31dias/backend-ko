@@ -4,7 +4,7 @@ export declare class AuthController {
     private readonly authService;
     constructor(authService: AuthService);
     login(payload: LoginDto): Promise<{
-        accessToken: `${string}-${string}-${string}-${string}-${string}`;
+        accessToken: string;
         user: {
             id: string;
             name: string;
