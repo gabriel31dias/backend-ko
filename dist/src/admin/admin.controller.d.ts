@@ -77,12 +77,12 @@ export declare class AdminController {
                 missing: number;
                 completionRate: number;
             };
+            id: string;
+            status: string;
             createdAt: Date;
             name: string;
-            id: string;
-            updatedAt: Date;
-            status: string;
             email: string;
+            updatedAt: Date;
             pfDocumentFrontPath: string;
             pfDocumentBackPath: string;
             pfSelfieDocumentPath: string;

@@ -43,6 +43,7 @@ let ApiKeysService = class ApiKeysService {
                 name: dto.name,
                 publicKey,
                 secretKey,
+                permissions: dto.permissions,
                 userId,
                 expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
             },
@@ -53,6 +54,7 @@ let ApiKeysService = class ApiKeysService {
             publicKey: apiKey.publicKey,
             secretKey: apiKey.secretKey,
             isActive: apiKey.isActive,
+            permissions: apiKey.permissions,
             lastUsedAt: apiKey.lastUsedAt,
             expiresAt: apiKey.expiresAt,
             createdAt: apiKey.createdAt,
@@ -107,7 +109,9 @@ let ApiKeysService = class ApiKeysService {
                     id: key.id,
                     name: key.name,
                     publicKey: key.publicKey,
+                    secretKey: key.secretKey,
                     isActive: key.isActive,
+                    permissions: key.permissions,
                     lastUsedAt: key.lastUsedAt,
                     expiresAt: key.expiresAt,
                     createdAt: key.createdAt,
@@ -142,7 +146,9 @@ let ApiKeysService = class ApiKeysService {
             id: apiKey.id,
             name: apiKey.name,
             publicKey: apiKey.publicKey,
+            secretKey: apiKey.secretKey,
             isActive: apiKey.isActive,
+            permissions: apiKey.permissions,
             lastUsedAt: apiKey.lastUsedAt,
             expiresAt: apiKey.expiresAt,
             createdAt: apiKey.createdAt,
@@ -176,6 +182,8 @@ let ApiKeysService = class ApiKeysService {
             updateData.name = dto.name;
         if (dto.isActive !== undefined)
             updateData.isActive = dto.isActive;
+        if (dto.permissions !== undefined)
+            updateData.permissions = dto.permissions;
         if (dto.expiresAt !== undefined) {
             updateData.expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null;
         }
@@ -188,6 +196,7 @@ let ApiKeysService = class ApiKeysService {
             name: apiKey.name,
             publicKey: apiKey.publicKey,
             isActive: apiKey.isActive,
+            permissions: apiKey.permissions,
             lastUsedAt: apiKey.lastUsedAt,
             expiresAt: apiKey.expiresAt,
             createdAt: apiKey.createdAt,
@@ -207,6 +216,22 @@ let ApiKeysService = class ApiKeysService {
         await this.prisma.apiKey.delete({
             where: { id },
         });
+    }
+    async validateApiKey(publicKey, secretKey) {
+        const apiKey = await this.prisma.apiKey.findFirst({
+            where: {
+                publicKey,
+                secretKey,
+                isActive: true,
+            },
+        });
+        if (apiKey) {
+            await this.prisma.apiKey.update({
+                where: { id: apiKey.id },
+                data: { lastUsedAt: new Date() },
+            });
+        }
+        return Object.assign(Object.assign({}, apiKey), { permissions: apiKey.permissions });
     }
     async validateApiCredentials(publicKey, secretKey) {
         const apiKey = await this.prisma.apiKey.findFirst({

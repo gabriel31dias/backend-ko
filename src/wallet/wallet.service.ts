@@ -2,6 +2,8 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { WalletMovementService } from './wallet-movement.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateWithdrawalDto } from './dto/create-withdrawal.dto';
+import { ApiKeysService } from '../api-keys/api-keys.service';
 
 @Injectable()
 export class WalletService {
@@ -9,6 +11,7 @@ export class WalletService {
     private readonly usersService: UsersService,
     private readonly walletMovementService: WalletMovementService,
     private readonly prisma: PrismaService,
+    private readonly apiKeysService: ApiKeysService,
   ) {}
 
   async getWalletSummary(userId: string) {
@@ -114,6 +117,72 @@ export class WalletService {
     const totalAmount = aggregates._sum.amount || 0;
     const totalCount = aggregates._count.id || 0;
     return totalCount > 0 ? totalAmount / totalCount : 0;
+  }
+
+  async createWithdrawal(dto: CreateWithdrawalDto) {
+    // Validar API keys via service (já feito pelo guard, mas vamos pegar os dados do usuário)
+    const { userId } = await this.apiKeysService.validateApiCredentials(dto.publicKey, dto.secretKey);
+    
+    // Verificar saldo suficiente
+    const user = await this.usersService.findById(userId);
+    if (user.wallet.balance < dto.amount) {
+      throw new BadRequestException('Saldo insuficiente para realizar o saque');
+    }
+
+    // Validar dados específicos do método
+    if (dto.method === 'pix') {
+      if (!dto.pixKey || !dto.pixKeyType) {
+        throw new BadRequestException('Dados PIX são obrigatórios para saque via PIX');
+      }
+    } else if (dto.method === 'bank_transfer') {
+      if (!dto.bankCode || !dto.accountNumber || !dto.agency || !dto.accountHolderName) {
+        throw new BadRequestException('Dados bancários são obrigatórios para transferência bancária');
+      }
+    }
+
+    // Criar o saque
+    const withdrawal = await this.prisma.withdrawal.create({
+      data: {
+        userId,
+        amount: dto.amount,
+        method: dto.method,
+        status: 'pending',
+        description: dto.description,
+        bankCode: dto.bankCode,
+        accountNumber: dto.accountNumber,
+        accountDigit: dto.accountDigit,
+        agency: dto.agency,
+        agencyDigit: dto.agencyDigit,
+        accountHolderName: dto.accountHolderName,
+        accountHolderDocument: dto.accountHolderDocument,
+        pixKey: dto.pixKey,
+        pixKeyType: dto.pixKeyType,
+      },
+    });
+
+    // Debitar da carteira
+    await this.walletMovementService.createMovement({
+      userId,
+      type: 'debit',
+      category: 'withdrawal',
+      amount: dto.amount,
+      description: dto.description || `Saque via ${dto.method}`,
+      referenceType: 'withdrawal',
+      referenceId: withdrawal.id,
+      metadata: {
+        withdrawalId: withdrawal.id,
+        method: dto.method,
+      },
+    });
+
+    return {
+      id: withdrawal.id,
+      amount: withdrawal.amount,
+      method: withdrawal.method,
+      status: withdrawal.status,
+      description: withdrawal.description,
+      createdAt: withdrawal.createdAt,
+    };
   }
 
   private parseDate(value?: string, label?: string): Date | undefined {

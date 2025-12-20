@@ -2,7 +2,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateApiKeyDto } from './dto/create-api-key.dto';
 import { UpdateApiKeyDto } from './dto/update-api-key.dto';
 import { ApiKeysPaginationQueryDto } from './dto/pagination-query.dto';
-import { ApiKeyResponse, PaginatedApiKeys } from './entities/api-key.entity';
+import { ApiKey, ApiKeyResponse, PaginatedApiKeys } from './entities/api-key.entity';
 export declare class ApiKeysService {
     private readonly prisma;
     constructor(prisma: PrismaService);
@@ -11,6 +11,7 @@ export declare class ApiKeysService {
     findOne(userId: string, id: string): Promise<ApiKeyResponse>;
     update(userId: string, id: string, dto: UpdateApiKeyDto): Promise<ApiKeyResponse>;
     remove(userId: string, id: string): Promise<void>;
+    validateApiKey(publicKey: string, secretKey: string): Promise<ApiKey | null>;
     validateApiCredentials(publicKey: string, secretKey: string): Promise<{
         userId: string;
         apiKeyId: string;

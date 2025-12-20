@@ -1,9 +1,12 @@
+import { ApiKeyPermission } from '../enums/api-key-permission.enum';
+
 export interface ApiKey {
   id: string;
   name: string;
   publicKey: string;
   secretKey: string;
   isActive: boolean;
+  permissions: ApiKeyPermission;
   lastUsedAt?: Date;
   expiresAt?: Date;
   userId: string;
@@ -17,6 +20,7 @@ export interface ApiKeyResponse {
   publicKey: string;
   secretKey?: string; // Só retorna na criação
   isActive: boolean;
+  permissions: ApiKeyPermission;
   lastUsedAt?: Date;
   expiresAt?: Date;
   createdAt: Date;

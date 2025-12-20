@@ -11,6 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CreateApiKeyDto = void 0;
 const class_validator_1 = require("class-validator");
+const api_key_permission_enum_1 = require("../enums/api-key-permission.enum");
 class CreateApiKeyDto {
 }
 exports.CreateApiKeyDto = CreateApiKeyDto;
@@ -19,6 +20,11 @@ __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], CreateApiKeyDto.prototype, "name", void 0);
+__decorate([
+    (0, class_validator_1.IsNotEmpty)(),
+    (0, class_validator_1.IsEnum)(api_key_permission_enum_1.ApiKeyPermission),
+    __metadata("design:type", String)
+], CreateApiKeyDto.prototype, "permissions", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsDateString)(),

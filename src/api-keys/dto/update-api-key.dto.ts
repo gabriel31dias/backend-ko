@@ -1,4 +1,5 @@
-import { IsOptional, IsString, IsBoolean, IsDateString } from 'class-validator';
+import { IsOptional, IsString, IsBoolean, IsDateString, IsEnum } from 'class-validator';
+import { ApiKeyPermission } from '../enums/api-key-permission.enum';
 
 export class UpdateApiKeyDto {
   @IsOptional()
@@ -8,6 +9,10 @@ export class UpdateApiKeyDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @IsEnum(ApiKeyPermission)
+  permissions?: ApiKeyPermission;
 
   @IsOptional()
   @IsDateString()

@@ -15,6 +15,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.WalletController = void 0;
 const common_1 = require("@nestjs/common");
 const wallet_service_1 = require("./wallet.service");
+const create_withdrawal_dto_1 = require("./dto/create-withdrawal.dto");
+const public_decorator_1 = require("../auth/public.decorator");
+const require_permission_decorator_1 = require("../api-keys/decorators/require-permission.decorator");
+const api_key_permission_guard_1 = require("../api-keys/guards/api-key-permission.guard");
+const api_key_permission_enum_1 = require("../api-keys/enums/api-key-permission.enum");
 let WalletController = class WalletController {
     constructor(walletService) {
         this.walletService = walletService;
@@ -32,6 +37,9 @@ let WalletController = class WalletController {
             limit: limit ? parseInt(limit) : undefined,
             category,
         });
+    }
+    async createWithdrawal(dto) {
+        return this.walletService.createWithdrawal(dto);
     }
 };
 exports.WalletController = WalletController;
@@ -62,6 +70,16 @@ __decorate([
     __metadata("design:paramtypes", [String, String, String, String, String]),
     __metadata("design:returntype", void 0)
 ], WalletController.prototype, "getStatement", null);
+__decorate([
+    (0, common_1.Post)('withdrawal'),
+    (0, public_decorator_1.Public)(),
+    (0, common_1.UseGuards)(api_key_permission_guard_1.ApiKeyPermissionGuard),
+    (0, require_permission_decorator_1.RequirePermission)(api_key_permission_enum_1.ApiKeyPermission.SAQUE),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [create_withdrawal_dto_1.CreateWithdrawalDto]),
+    __metadata("design:returntype", Promise)
+], WalletController.prototype, "createWithdrawal", null);
 exports.WalletController = WalletController = __decorate([
     (0, common_1.Controller)('wallet'),
     __metadata("design:paramtypes", [wallet_service_1.WalletService])

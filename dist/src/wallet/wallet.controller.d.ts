@@ -1,4 +1,5 @@
 import { WalletService } from './wallet.service';
+import { CreateWithdrawalDto } from './dto/create-withdrawal.dto';
 export declare class WalletController {
     private readonly walletService;
     constructor(walletService: WalletService);
@@ -27,5 +28,13 @@ export declare class WalletController {
         };
     }>;
     getStatement(userId: string, from?: string, to?: string, limit?: string, category?: string): Promise<import("./entities/wallet-movement.entity").WalletStatement>;
+    createWithdrawal(dto: CreateWithdrawalDto): Promise<{
+        id: string;
+        amount: number;
+        method: string;
+        status: string;
+        description: string;
+        createdAt: Date;
+    }>;
 }
 //# sourceMappingURL=wallet.controller.d.ts.map
