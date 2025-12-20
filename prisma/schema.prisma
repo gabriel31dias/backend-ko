@@ -54,6 +54,7 @@ model User {
   walletMovements                      WalletMovement[]
   webhooks                             Webhook[]
   apiKeys                              ApiKey[]
+  withdrawals                          Withdrawal[]
 }
 
 model PaymentLink {
@@ -196,19 +197,44 @@ model WebhookDelivery {
 }
 
 model ApiKey {
-  id         String    @id @default(uuid())
-  name       String
-  publicKey  String    @unique
-  secretKey  String    @unique
-  userId     String
-  isActive   Boolean   @default(true)
-  lastUsedAt DateTime?
-  expiresAt  DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  user       User      @relation(fields: [userId], references: [id])
+  id          String    @id @default(uuid())
+  name        String
+  publicKey   String    @unique
+  secretKey   String    @unique
+  userId      String
+  isActive    Boolean   @default(true)
+  permissions String    @default("transacoes")
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id])
 
   @@index([userId])
   @@index([publicKey])
   @@index([secretKey])
+}
+
+model Withdrawal {
+  id                      String    @id @default(uuid())
+  userId                  String
+  amount                  Float
+  method                  String
+  status                  String    @default("pending")
+  description             String?
+  bankCode                String?
+  accountNumber           String?
+  accountDigit            String?
+  agency                  String?
+  agencyDigit             String?
+  accountHolderName       String?
+  accountHolderDocument   String?
+  pixKey                  String?
+  pixKeyType              String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  user                    User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
 }

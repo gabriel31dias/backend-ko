@@ -20,6 +20,9 @@ const pagination_query_dto_1 = require("./dto/pagination-query.dto");
 const transactions_service_1 = require("./transactions.service");
 const public_decorator_1 = require("../auth/public.decorator");
 const user_decorator_1 = require("../auth/user.decorator");
+const require_permission_decorator_1 = require("../api-keys/decorators/require-permission.decorator");
+const api_key_permission_guard_1 = require("../api-keys/guards/api-key-permission.guard");
+const api_key_permission_enum_1 = require("../api-keys/enums/api-key-permission.enum");
 let TransactionsController = class TransactionsController {
     constructor(transactionsService) {
         this.transactionsService = transactionsService;
@@ -49,6 +52,8 @@ __decorate([
 __decorate([
     (0, common_1.Post)('process'),
     (0, public_decorator_1.Public)(),
+    (0, common_1.UseGuards)(api_key_permission_guard_1.ApiKeyPermissionGuard),
+    (0, require_permission_decorator_1.RequirePermission)(api_key_permission_enum_1.ApiKeyPermission.TRANSACOES),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [create_transaction_dto_1.CreateTransactionDto]),

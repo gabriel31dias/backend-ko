@@ -11,6 +11,7 @@ const common_1 = require("@nestjs/common");
 const users_module_1 = require("../users/users.module");
 const prisma_module_1 = require("../prisma/prisma.module");
 const settings_module_1 = require("../settings/settings.module");
+const api_keys_module_1 = require("../api-keys/api-keys.module");
 const wallet_controller_1 = require("./wallet.controller");
 const wallet_service_1 = require("./wallet.service");
 const wallet_movement_service_1 = require("./wallet-movement.service");
@@ -19,7 +20,7 @@ let WalletModule = class WalletModule {
 exports.WalletModule = WalletModule;
 exports.WalletModule = WalletModule = __decorate([
     (0, common_1.Module)({
-        imports: [users_module_1.UsersModule, prisma_module_1.PrismaModule, settings_module_1.SettingsModule],
+        imports: [users_module_1.UsersModule, prisma_module_1.PrismaModule, settings_module_1.SettingsModule, api_keys_module_1.ApiKeysModule],
         controllers: [wallet_controller_1.WalletController],
         providers: [wallet_service_1.WalletService, wallet_movement_service_1.WalletMovementService],
         exports: [wallet_service_1.WalletService, wallet_movement_service_1.WalletMovementService],

@@ -1,5 +1,10 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query, Post, Body, UseGuards } from '@nestjs/common';
 import { WalletService } from './wallet.service';
+import { CreateWithdrawalDto } from './dto/create-withdrawal.dto';
+import { Public } from '../auth/public.decorator';
+import { RequirePermission } from '../api-keys/decorators/require-permission.decorator';
+import { ApiKeyPermissionGuard } from '../api-keys/guards/api-key-permission.guard';
+import { ApiKeyPermission } from '../api-keys/enums/api-key-permission.enum';
 
 @Controller('wallet')
 export class WalletController {
@@ -33,5 +38,13 @@ export class WalletController {
       limit: limit ? parseInt(limit) : undefined,
       category,
     });
+  }
+
+  @Post('withdrawal')
+  @Public()
+  @UseGuards(ApiKeyPermissionGuard)
+  @RequirePermission(ApiKeyPermission.SAQUE)
+  async createWithdrawal(@Body() dto: CreateWithdrawalDto) {
+    return this.walletService.createWithdrawal(dto);
   }
 }

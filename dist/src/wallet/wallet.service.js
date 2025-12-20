@@ -14,11 +14,13 @@ const common_1 = require("@nestjs/common");
 const users_service_1 = require("../users/users.service");
 const wallet_movement_service_1 = require("./wallet-movement.service");
 const prisma_service_1 = require("../prisma/prisma.service");
+const api_keys_service_1 = require("../api-keys/api-keys.service");
 let WalletService = class WalletService {
-    constructor(usersService, walletMovementService, prisma) {
+    constructor(usersService, walletMovementService, prisma, apiKeysService) {
         this.usersService = usersService;
         this.walletMovementService = walletMovementService;
         this.prisma = prisma;
+        this.apiKeysService = apiKeysService;
     }
     async getWalletSummary(userId) {
         const user = await this.usersService.findById(userId);
@@ -94,6 +96,62 @@ let WalletService = class WalletService {
         const totalCount = aggregates._count.id || 0;
         return totalCount > 0 ? totalAmount / totalCount : 0;
     }
+    async createWithdrawal(dto) {
+        const { userId } = await this.apiKeysService.validateApiCredentials(dto.publicKey, dto.secretKey);
+        const user = await this.usersService.findById(userId);
+        if (user.wallet.balance < dto.amount) {
+            throw new common_1.BadRequestException('Saldo insuficiente para realizar o saque');
+        }
+        if (dto.method === 'pix') {
+            if (!dto.pixKey || !dto.pixKeyType) {
+                throw new common_1.BadRequestException('Dados PIX são obrigatórios para saque via PIX');
+            }
+        }
+        else if (dto.method === 'bank_transfer') {
+            if (!dto.bankCode || !dto.accountNumber || !dto.agency || !dto.accountHolderName) {
+                throw new common_1.BadRequestException('Dados bancários são obrigatórios para transferência bancária');
+            }
+        }
+        const withdrawal = await this.prisma.withdrawal.create({
+            data: {
+                userId,
+                amount: dto.amount,
+                method: dto.method,
+                status: 'pending',
+                description: dto.description,
+                bankCode: dto.bankCode,
+                accountNumber: dto.accountNumber,
+                accountDigit: dto.accountDigit,
+                agency: dto.agency,
+                agencyDigit: dto.agencyDigit,
+                accountHolderName: dto.accountHolderName,
+                accountHolderDocument: dto.accountHolderDocument,
+                pixKey: dto.pixKey,
+                pixKeyType: dto.pixKeyType,
+            },
+        });
+        await this.walletMovementService.createMovement({
+            userId,
+            type: 'debit',
+            category: 'withdrawal',
+            amount: dto.amount,
+            description: dto.description || `Saque via ${dto.method}`,
+            referenceType: 'withdrawal',
+            referenceId: withdrawal.id,
+            metadata: {
+                withdrawalId: withdrawal.id,
+                method: dto.method,
+            },
+        });
+        return {
+            id: withdrawal.id,
+            amount: withdrawal.amount,
+            method: withdrawal.method,
+            status: withdrawal.status,
+            description: withdrawal.description,
+            createdAt: withdrawal.createdAt,
+        };
+    }
     parseDate(value, label) {
         if (!value) {
             return undefined;
@@ -110,6 +168,7 @@ exports.WalletService = WalletService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [users_service_1.UsersService,
         wallet_movement_service_1.WalletMovementService,
-        prisma_service_1.PrismaService])
+        prisma_service_1.PrismaService,
+        api_keys_service_1.ApiKeysService])
 ], WalletService);
 //# sourceMappingURL=wallet.service.js.map

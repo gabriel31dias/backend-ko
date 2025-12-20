@@ -4,6 +4,7 @@ import { CreateApiKeyDto } from './dto/create-api-key.dto';
 import { UpdateApiKeyDto } from './dto/update-api-key.dto';
 import { ApiKeysPaginationQueryDto } from './dto/pagination-query.dto';
 import { ApiKey, ApiKeyResponse, PaginatedApiKeys } from './entities/api-key.entity';
+import { ApiKeyPermission } from './enums/api-key-permission.enum';
 import { randomUUID } from 'crypto';
 
 @Injectable()
@@ -43,6 +44,7 @@ export class ApiKeysService {
         name: dto.name,
         publicKey,
         secretKey,
+        permissions: dto.permissions,
         userId,
         expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
       },
@@ -54,6 +56,7 @@ export class ApiKeysService {
       publicKey: apiKey.publicKey,
       secretKey: apiKey.secretKey, // Retorna na criação
       isActive: apiKey.isActive,
+      permissions: apiKey.permissions as ApiKeyPermission,
       lastUsedAt: apiKey.lastUsedAt,
       expiresAt: apiKey.expiresAt,
       createdAt: apiKey.createdAt,
@@ -118,8 +121,9 @@ export class ApiKeysService {
           id: key.id,
           name: key.name,
           publicKey: key.publicKey,
-          // Não retorna secretKey na listagem
+          secretKey: key.secretKey,
           isActive: key.isActive,
+          permissions: key.permissions as ApiKeyPermission,
           lastUsedAt: key.lastUsedAt,
           expiresAt: key.expiresAt,
           createdAt: key.createdAt,
@@ -156,8 +160,9 @@ export class ApiKeysService {
       id: apiKey.id,
       name: apiKey.name,
       publicKey: apiKey.publicKey,
-      // Não retorna secretKey
+      secretKey: apiKey.secretKey,
       isActive: apiKey.isActive,
+      permissions: apiKey.permissions as ApiKeyPermission,
       lastUsedAt: apiKey.lastUsedAt,
       expiresAt: apiKey.expiresAt,
       createdAt: apiKey.createdAt,
@@ -196,6 +201,7 @@ export class ApiKeysService {
     
     if (dto.name !== undefined) updateData.name = dto.name;
     if (dto.isActive !== undefined) updateData.isActive = dto.isActive;
+    if (dto.permissions !== undefined) updateData.permissions = dto.permissions;
     if (dto.expiresAt !== undefined) {
       updateData.expiresAt = dto.expiresAt ? new Date(dto.expiresAt) : null;
     }
@@ -210,6 +216,7 @@ export class ApiKeysService {
       name: apiKey.name,
       publicKey: apiKey.publicKey,
       isActive: apiKey.isActive,
+      permissions: apiKey.permissions as ApiKeyPermission,
       lastUsedAt: apiKey.lastUsedAt,
       expiresAt: apiKey.expiresAt,
       createdAt: apiKey.createdAt,
@@ -232,6 +239,29 @@ export class ApiKeysService {
     await this.prisma.apiKey.delete({
       where: { id },
     });
+  }
+
+  async validateApiKey(publicKey: string, secretKey: string): Promise<ApiKey | null> {
+    const apiKey = await this.prisma.apiKey.findFirst({
+      where: {
+        publicKey,
+        secretKey,
+        isActive: true,
+      },
+    });
+
+    if (apiKey) {
+      // Atualizar lastUsedAt
+      await this.prisma.apiKey.update({
+        where: { id: apiKey.id },
+        data: { lastUsedAt: new Date() },
+      });
+    }
+
+    return {
+      ...apiKey,
+      permissions: apiKey.permissions as ApiKeyPermission,
+    };
   }
 
   async validateApiCredentials(publicKey: string, secretKey: string): Promise<{ userId: string; apiKeyId: string }> {

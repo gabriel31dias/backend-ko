@@ -1,11 +1,14 @@
 import { UsersService } from '../users/users.service';
 import { WalletMovementService } from './wallet-movement.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { CreateWithdrawalDto } from './dto/create-withdrawal.dto';
+import { ApiKeysService } from '../api-keys/api-keys.service';
 export declare class WalletService {
     private readonly usersService;
     private readonly walletMovementService;
     private readonly prisma;
-    constructor(usersService: UsersService, walletMovementService: WalletMovementService, prisma: PrismaService);
+    private readonly apiKeysService;
+    constructor(usersService: UsersService, walletMovementService: WalletMovementService, prisma: PrismaService, apiKeysService: ApiKeysService);
     getWalletSummary(userId: string): Promise<{
         userId: string;
         currency: string;
@@ -40,6 +43,14 @@ export declare class WalletService {
         };
     }>;
     private calculateAverageTicket;
+    createWithdrawal(dto: CreateWithdrawalDto): Promise<{
+        id: string;
+        amount: number;
+        method: string;
+        status: string;
+        description: string;
+        createdAt: Date;
+    }>;
     private parseDate;
 }
 //# sourceMappingURL=wallet.service.d.ts.map
