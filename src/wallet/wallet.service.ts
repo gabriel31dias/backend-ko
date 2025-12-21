@@ -49,8 +49,19 @@ export class WalletService {
     const user = await this.usersService.findById(userId);
     const averageTicket = await this.calculateAverageTicket(userId);
 
-    const fromDate = this.parseDate(options?.from, 'from');
-    const toDate = this.parseDate(options?.to, 'to');
+    let fromDate = this.parseDate(options?.from, 'from');
+    let toDate = this.parseDate(options?.to, 'to');
+
+    // Se nenhuma data foi fornecida, usar última semana como padrão
+    if (!fromDate && !toDate) {
+      const now = new Date();
+      fromDate = new Date(now);
+      fromDate.setDate(now.getDate() - 7); // 7 dias atrás
+      fromDate.setHours(0, 0, 0, 0); // Início do dia
+      
+      toDate = new Date(now);
+      toDate.setHours(23, 59, 59, 999); // Final do dia
+    }
 
     if (fromDate && toDate && fromDate > toDate) {
       throw new BadRequestException('Data inicial não pode ser maior que a data final');
@@ -64,7 +75,7 @@ export class WalletService {
           }
         : undefined;
 
-    const [creditsAggregate, debitsAggregate] = await Promise.all([
+    const [creditsAggregate, debitsAggregate, salesCount] = await Promise.all([
       this.prisma.walletMovement.aggregate({
         where: {
           userId,
@@ -80,6 +91,13 @@ export class WalletService {
           ...(createdAtFilter && { createdAt: createdAtFilter }),
         },
         _sum: { amount: true },
+      }),
+      this.prisma.transaction.count({
+        where: {
+          receiverUserId: userId,
+          status: 'approved',
+          ...(createdAtFilter && { createdAt: createdAtFilter }),
+        },
       }),
     ]);
 
@@ -100,6 +118,7 @@ export class WalletService {
         totalCredits: periodCredits,
         totalDebits: periodDebits,
         netMovement,
+        salesCount,
       },
     };
   }
@@ -193,6 +212,12 @@ export class WalletService {
     if (isNaN(parsed.getTime())) {
       throw new BadRequestException(`Data inválida para o parâmetro ${label || 'date'}`);
     }
+    
+    // Se for um parâmetro 'to' e for apenas uma data (sem horário), setar para final do dia
+    if (label === 'to' && value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      parsed.setUTCHours(23, 59, 59, 999);
+    }
+    
     return parsed;
   }
 }

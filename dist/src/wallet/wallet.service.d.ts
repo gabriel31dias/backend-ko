@@ -40,6 +40,7 @@ export declare class WalletService {
             totalCredits: number;
             totalDebits: number;
             netMovement: number;
+            salesCount: number;
         };
     }>;
     private calculateAverageTicket;

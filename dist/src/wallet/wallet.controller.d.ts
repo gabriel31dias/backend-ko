@@ -25,6 +25,7 @@ export declare class WalletController {
             totalCredits: number;
             totalDebits: number;
             netMovement: number;
+            salesCount: number;
         };
     }>;
     getStatement(userId: string, from?: string, to?: string, limit?: string, category?: string): Promise<import("./entities/wallet-movement.entity").WalletStatement>;
