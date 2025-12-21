@@ -47,14 +47,22 @@ let WalletService = class WalletService {
     async getBalance(userId, options) {
         const user = await this.usersService.findById(userId);
         const averageTicket = await this.calculateAverageTicket(userId);
-        const fromDate = this.parseDate(options === null || options === void 0 ? void 0 : options.from, 'from');
-        const toDate = this.parseDate(options === null || options === void 0 ? void 0 : options.to, 'to');
+        let fromDate = this.parseDate(options === null || options === void 0 ? void 0 : options.from, 'from');
+        let toDate = this.parseDate(options === null || options === void 0 ? void 0 : options.to, 'to');
+        if (!fromDate && !toDate) {
+            const now = new Date();
+            fromDate = new Date(now);
+            fromDate.setDate(now.getDate() - 7);
+            fromDate.setHours(0, 0, 0, 0);
+            toDate = new Date(now);
+            toDate.setHours(23, 59, 59, 999);
+        }
         if (fromDate && toDate && fromDate > toDate) {
             throw new common_1.BadRequestException('Data inicial não pode ser maior que a data final');
         }
         const createdAtFilter = fromDate || toDate
             ? Object.assign(Object.assign({}, (fromDate && { gte: fromDate })), (toDate && { lte: toDate })) : undefined;
-        const [creditsAggregate, debitsAggregate] = await Promise.all([
+        const [creditsAggregate, debitsAggregate, salesCount] = await Promise.all([
             this.prisma.walletMovement.aggregate({
                 where: Object.assign({ userId, type: 'credit' }, (createdAtFilter && { createdAt: createdAtFilter })),
                 _sum: { amount: true },
@@ -62,6 +70,9 @@ let WalletService = class WalletService {
             this.prisma.walletMovement.aggregate({
                 where: Object.assign({ userId, type: 'debit' }, (createdAtFilter && { createdAt: createdAtFilter })),
                 _sum: { amount: true },
+            }),
+            this.prisma.transaction.count({
+                where: Object.assign({ receiverUserId: userId, status: 'approved' }, (createdAtFilter && { createdAt: createdAtFilter })),
             }),
         ]);
         const periodCredits = creditsAggregate._sum.amount || 0;
@@ -80,6 +91,7 @@ let WalletService = class WalletService {
                 totalCredits: periodCredits,
                 totalDebits: periodDebits,
                 netMovement,
+                salesCount,
             },
         };
     }
@@ -159,6 +171,9 @@ let WalletService = class WalletService {
         const parsed = new Date(value);
         if (isNaN(parsed.getTime())) {
             throw new common_1.BadRequestException(`Data inválida para o parâmetro ${label || 'date'}`);
+        }
+        if (label === 'to' && value.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            parsed.setUTCHours(23, 59, 59, 999);
         }
         return parsed;
     }
