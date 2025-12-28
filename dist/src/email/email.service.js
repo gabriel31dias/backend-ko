@@ -11,30 +11,25 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EmailService = void 0;
 const common_1 = require("@nestjs/common");
-const nodemailer = require("nodemailer");
+const mailersend_1 = require("mailersend");
 let EmailService = class EmailService {
     constructor() {
-        const config = {
-            host: process.env.EMAIL_HOST || 'localhost',
-            port: parseInt(process.env.EMAIL_PORT || '587'),
-            secure: process.env.EMAIL_SECURE === 'true',
-        };
-        if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
-            config.auth = {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASSWORD,
-            };
+        if (!process.env.MAILERSEND_API_TOKEN) {
+            throw new Error('MAILERSEND_API_TOKEN environment variable is required');
         }
-        this.transporter = nodemailer.createTransport(config);
+        this.mailerSend = new mailersend_1.MailerSend({
+            apiKey: process.env.MAILERSEND_API_TOKEN,
+        });
+        this.sender = new mailersend_1.Sender(process.env.EMAIL_FROM || 'noreply@spinmaaser.com', 'SpinMaaser');
     }
     async sendVerificationCode(email, code, name) {
-        const mailOptions = {
-            from: process.env.EMAIL_FROM || 'noreply@spinmaaser.com',
-            to: email,
-            subject: 'Código de Verificação - SpinMaaser',
-            html: this.getVerificationEmailTemplate(code, name),
-        };
-        await this.transporter.sendMail(mailOptions);
+        const recipients = [new mailersend_1.Recipient(email, name)];
+        const emailParams = new mailersend_1.EmailParams()
+            .setFrom(this.sender)
+            .setTo(recipients)
+            .setSubject('Código de Verificação - SpinMaaser')
+            .setHtml(this.getVerificationEmailTemplate(code, name));
+        await this.mailerSend.email.send(emailParams);
     }
     getVerificationEmailTemplate(code, name) {
         return `

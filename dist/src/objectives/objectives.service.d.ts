@@ -28,8 +28,8 @@ export declare class ObjectivesService {
         name: string;
         createdAt: Date;
         updatedAt: Date;
-        description: string | null;
         targetAmount: number;
+        description: string | null;
         isActive: boolean;
         order: number;
     }>;

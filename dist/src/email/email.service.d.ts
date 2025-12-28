@@ -1,5 +1,6 @@
 export declare class EmailService {
-    private transporter;
+    private mailerSend;
+    private sender;
     constructor();
     sendVerificationCode(email: string, code: string, name?: string): Promise<void>;
     private getVerificationEmailTemplate;

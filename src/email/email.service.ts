@@ -1,36 +1,36 @@
 import { Injectable } from '@nestjs/common';
-import * as nodemailer from 'nodemailer';
+import { MailerSend, EmailParams, Sender, Recipient } from 'mailersend';
 
 @Injectable()
 export class EmailService {
-  private transporter: nodemailer.Transporter;
+  private mailerSend: MailerSend;
+  private sender: Sender;
 
   constructor() {
-    const config: any = {
-      host: process.env.EMAIL_HOST || 'localhost',
-      port: parseInt(process.env.EMAIL_PORT || '587'),
-      secure: process.env.EMAIL_SECURE === 'true',
-    };
-
-    if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
-      config.auth = {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD,
-      };
+    if (!process.env.MAILERSEND_API_TOKEN) {
+      throw new Error('MAILERSEND_API_TOKEN environment variable is required');
     }
 
-    this.transporter = nodemailer.createTransport(config);
+    this.mailerSend = new MailerSend({
+      apiKey: process.env.MAILERSEND_API_TOKEN,
+    });
+
+    this.sender = new Sender(
+      process.env.EMAIL_FROM || 'noreply@spinmaaser.com',
+      'SpinMaaser'
+    );
   }
 
   async sendVerificationCode(email: string, code: string, name?: string): Promise<void> {
-    const mailOptions = {
-      from: process.env.EMAIL_FROM || 'noreply@spinmaaser.com',
-      to: email,
-      subject: 'Código de Verificação - SpinMaaser',
-      html: this.getVerificationEmailTemplate(code, name),
-    };
+    const recipients = [new Recipient(email, name)];
 
-    await this.transporter.sendMail(mailOptions);
+    const emailParams = new EmailParams()
+      .setFrom(this.sender)
+      .setTo(recipients)
+      .setSubject('Código de Verificação - SpinMaaser')
+      .setHtml(this.getVerificationEmailTemplate(code, name));
+
+    await this.mailerSend.email.send(emailParams);
   }
 
   private getVerificationEmailTemplate(code: string, name?: string): string {

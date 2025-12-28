@@ -80,6 +80,10 @@ export declare class AdminController {
             id: string;
             name: string;
             email: string;
+            status: string;
+            cpf: string;
+            cnpj: string;
+            notes: string;
             createdAt: Date;
             updatedAt: Date;
             pfDocumentFrontPath: string;
@@ -91,10 +95,6 @@ export declare class AdminController {
             legalRepresentativeSelfiePath: string;
             pjBankProofPath: string;
             cnpjDocumentPath: string;
-            cnpj: string;
-            cpf: string;
-            notes: string;
-            status: string;
         }[];
         pagination: {
             page: number;
