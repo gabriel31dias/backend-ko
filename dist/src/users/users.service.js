@@ -12,13 +12,15 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.UsersService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
+const verification_service_1 = require("../verification/verification.service");
 const crypto_1 = require("crypto");
 const bcryptjs_1 = require("bcryptjs");
 const VALID_STATUSES = ['pending', 'approved', 'rejected'];
 const PASSWORD_SALT_ROUNDS = 10;
 let UsersService = class UsersService {
-    constructor(prisma) {
+    constructor(prisma, verificationService) {
         this.prisma = prisma;
+        this.verificationService = verificationService;
     }
     async createUser(payload, documents = {}) {
         var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
@@ -76,6 +78,12 @@ let UsersService = class UsersService {
                 secretKey: this.generateSecretKey(),
             },
         });
+        try {
+            await this.verificationService.generateAndSendVerificationCode(normalizedEmail.toLowerCase(), payload.name);
+        }
+        catch (error) {
+            console.error('Erro ao enviar email de verificação:', error);
+        }
         return this.toDomain(created);
     }
     async findByEmail(email) {
@@ -412,6 +420,7 @@ let UsersService = class UsersService {
 exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        verification_service_1.VerificationService])
 ], UsersService);
 //# sourceMappingURL=users.service.js.map

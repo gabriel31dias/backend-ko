@@ -5,9 +5,11 @@ import { UpdateStatusDto } from './dto/update-status.dto';
 import { ApprovalNotesDto } from './dto/approval-notes.dto';
 import { RejectUserDto } from './dto/reject-user.dto';
 import { DocumentUploadPaths, UsersService } from './users.service';
+import { VerificationService } from '../verification/verification.service';
 export declare class UsersController {
     private readonly usersService;
-    constructor(usersService: UsersService);
+    private readonly verificationService;
+    constructor(usersService: UsersService, verificationService: VerificationService);
     createUser(payload: CreateUserDto, files?: UploadedDocumentFiles, req?: Request): Promise<{
         documents: {
             pf: {
@@ -480,6 +482,17 @@ export declare class UsersController {
             missing: number;
             rejected: number;
         };
+    }>;
+    verifyEmailCode(body: {
+        email: string;
+        code: string;
+    }): Promise<{
+        verified: boolean;
+    }>;
+    resendVerificationCode(body: {
+        email: string;
+    }): Promise<{
+        message: string;
     }>;
     private extractDocumentPaths;
     private resolveFilePath;

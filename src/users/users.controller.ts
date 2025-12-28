@@ -11,12 +11,16 @@ import { ApprovalNotesDto } from './dto/approval-notes.dto';
 import { RejectUserDto } from './dto/reject-user.dto';
 import { User } from './user.entity';
 import { DocumentUploadPaths, UsersService } from './users.service';
+import { VerificationService } from '../verification/verification.service';
 import { Public } from '../auth/public.decorator';
 import { CurrentUser } from '../auth/user.decorator';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly verificationService: VerificationService,
+  ) {}
 
   @Post()
   @Public()
@@ -138,6 +142,25 @@ export class UsersController {
       ...rejectedInfo,
       documentsUrls: documentUrls,
     };
+  }
+
+  @Post('verify-email')
+  @Public()
+  async verifyEmailCode(@Body() body: { email: string; code: string }) {
+    const isValid = await this.verificationService.verifyCode(body.email, body.code);
+    return { verified: isValid };
+  }
+
+  @Post('resend-verification')
+  @Public()
+  async resendVerificationCode(@Body() body: { email: string }) {
+    const user = await this.usersService.findByEmail(body.email);
+    if (!user) {
+      return { message: 'Se o email existir, um código será enviado.' };
+    }
+    
+    await this.verificationService.generateAndSendVerificationCode(body.email, user.name);
+    return { message: 'Código enviado com sucesso.' };
   }
 
   private extractDocumentPaths(files: UploadedDocumentFiles): DocumentUploadPaths {

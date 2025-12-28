@@ -17,5 +17,19 @@ services:
       timeout: 10s
       retries: 3
 
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: spinmaaser-mailhog
+    restart: unless-stopped
+    ports:
+      - "1026:1025"  # SMTP server
+      - "8025:8025"  # Web interface
+    environment:
+      - MH_STORAGE=maildir
+      - MH_MAILDIR_PATH=/maildir
+    volumes:
+      - mailhog_data:/maildir
+
 volumes:
   postgres_data:
+  mailhog_data:

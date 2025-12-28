@@ -35,11 +35,13 @@ const update_status_dto_1 = require("./dto/update-status.dto");
 const approval_notes_dto_1 = require("./dto/approval-notes.dto");
 const reject_user_dto_1 = require("./dto/reject-user.dto");
 const users_service_1 = require("./users.service");
+const verification_service_1 = require("../verification/verification.service");
 const public_decorator_1 = require("../auth/public.decorator");
 const user_decorator_1 = require("../auth/user.decorator");
 let UsersController = class UsersController {
-    constructor(usersService) {
+    constructor(usersService, verificationService) {
         this.usersService = usersService;
+        this.verificationService = verificationService;
     }
     async createUser(payload, files, req) {
         const documentPaths = this.extractDocumentPaths(files || {});
@@ -97,6 +99,18 @@ let UsersController = class UsersController {
             documentUrls[doc.type] = this.buildFileUrl(doc.path, req);
         });
         return Object.assign(Object.assign({}, rejectedInfo), { documentsUrls: documentUrls });
+    }
+    async verifyEmailCode(body) {
+        const isValid = await this.verificationService.verifyCode(body.email, body.code);
+        return { verified: isValid };
+    }
+    async resendVerificationCode(body) {
+        const user = await this.usersService.findByEmail(body.email);
+        if (!user) {
+            return { message: 'Se o email existir, um código será enviado.' };
+        }
+        await this.verificationService.generateAndSendVerificationCode(body.email, user.name);
+        return { message: 'Código enviado com sucesso.' };
     }
     extractDocumentPaths(files) {
         return {
@@ -300,9 +314,26 @@ __decorate([
     __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "getMyRejectedDocuments", null);
+__decorate([
+    (0, common_1.Post)('verify-email'),
+    (0, public_decorator_1.Public)(),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "verifyEmailCode", null);
+__decorate([
+    (0, common_1.Post)('resend-verification'),
+    (0, public_decorator_1.Public)(),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "resendVerificationCode", null);
 exports.UsersController = UsersController = __decorate([
     (0, common_1.Controller)('users'),
-    __metadata("design:paramtypes", [users_service_1.UsersService])
+    __metadata("design:paramtypes", [users_service_1.UsersService,
+        verification_service_1.VerificationService])
 ], UsersController);
 const USER_UPLOAD_DIR = (0, path_1.join)(process.cwd(), 'uploads', 'users');
 function ensureUploadDir() {

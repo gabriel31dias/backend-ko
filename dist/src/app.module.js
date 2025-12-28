@@ -22,13 +22,16 @@ const prisma_module_1 = require("./prisma/prisma.module");
 const dashboard_module_1 = require("./dashboard/dashboard.module");
 const api_keys_module_1 = require("./api-keys/api-keys.module");
 const admin_module_1 = require("./admin/admin.module");
+const objectives_module_1 = require("./objectives/objectives.module");
+const email_module_1 = require("./email/email.module");
+const verification_module_1 = require("./verification/verification.module");
 const jwt_auth_guard_1 = require("./auth/jwt-auth.guard");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule, users_module_1.UsersModule, auth_module_1.AuthModule, wallet_module_1.WalletModule, payment_links_module_1.PaymentLinksModule, transactions_module_1.TransactionsModule, settings_module_1.SettingsModule, webhooks_module_1.WebhooksModule, dashboard_module_1.DashboardModule, api_keys_module_1.ApiKeysModule, admin_module_1.AdminModule],
+        imports: [prisma_module_1.PrismaModule, users_module_1.UsersModule, auth_module_1.AuthModule, wallet_module_1.WalletModule, payment_links_module_1.PaymentLinksModule, transactions_module_1.TransactionsModule, settings_module_1.SettingsModule, webhooks_module_1.WebhooksModule, dashboard_module_1.DashboardModule, api_keys_module_1.ApiKeysModule, admin_module_1.AdminModule, objectives_module_1.ObjectivesModule, email_module_1.EmailModule, verification_module_1.VerificationModule],
         controllers: [app_controller_1.AppController],
         providers: [
             app_service_1.AppService,

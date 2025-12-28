@@ -127,10 +127,9 @@ export declare class AdminService {
                 completionRate: number;
             };
             id: string;
-            status: string;
-            createdAt: Date;
             name: string;
             email: string;
+            createdAt: Date;
             updatedAt: Date;
             pfDocumentFrontPath: string;
             pfDocumentBackPath: string;
@@ -144,6 +143,7 @@ export declare class AdminService {
             cnpj: string;
             cpf: string;
             notes: string;
+            status: string;
         }[];
         pagination: {
             page: number;

@@ -47,7 +47,6 @@ export class WalletService {
 
   async getBalance(userId: string, options?: { from?: string; to?: string }) {
     const user = await this.usersService.findById(userId);
-    const averageTicket = await this.calculateAverageTicket(userId);
 
     let fromDate = this.parseDate(options?.from, 'from');
     let toDate = this.parseDate(options?.to, 'to');
@@ -75,7 +74,7 @@ export class WalletService {
           }
         : undefined;
 
-    const [creditsAggregate, debitsAggregate, salesCount] = await Promise.all([
+    const [creditsAggregate, debitsAggregate, salesCount, transactionsAggregate] = await Promise.all([
       this.prisma.walletMovement.aggregate({
         where: {
           userId,
@@ -99,27 +98,35 @@ export class WalletService {
           ...(createdAtFilter && { createdAt: createdAtFilter }),
         },
       }),
+      this.prisma.transaction.aggregate({
+        where: {
+          receiverUserId: userId,
+          status: 'approved',
+          ...(createdAtFilter && { createdAt: createdAtFilter }),
+        },
+        _sum: { amount: true },
+      }),
     ]);
 
     const periodCredits = creditsAggregate._sum.amount || 0;
     const periodDebits = debitsAggregate._sum.amount || 0;
     const netMovement = periodCredits - periodDebits;
+    const grossBalance = transactionsAggregate._sum.amount || 0;
+    const averageTicketSold = salesCount > 0 ? grossBalance / salesCount : 0;
     
     return {
       userId: user.id,
-      balance: user.wallet.balance,
-      grossBalance: user.wallet.grossBalance,
+      balance: netMovement,
+      grossBalance: grossBalance,
       currency: user.wallet.currency,
-      averageTicketSold: averageTicket,
+      averageTicketSold: averageTicketSold,
       refundFee: 0,
-      period: {
-        from: fromDate,
-        to: toDate,
-        totalCredits: periodCredits,
-        totalDebits: periodDebits,
-        netMovement,
-        salesCount,
-      },
+      from: fromDate,
+      to: toDate,
+      totalCredits: periodCredits,
+      totalDebits: periodDebits,
+      netMovement,
+      salesCount,
     };
   }
 

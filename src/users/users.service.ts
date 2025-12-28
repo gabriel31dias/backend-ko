@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateFeesDto } from './dto/update-fees.dto';
 import { User, WalletSnapshot } from './user.entity';
+import { VerificationService } from '../verification/verification.service';
 import { randomUUID } from 'crypto';
 import { compare, hash } from 'bcryptjs';
 
@@ -24,7 +25,10 @@ export interface DocumentUploadPaths {
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly verificationService: VerificationService,
+  ) {}
 
   async createUser(payload: CreateUserDto, documents: DocumentUploadPaths = {}): Promise<User> {
     const normalizedEmail = (payload.email ?? '').trim();
@@ -89,6 +93,17 @@ export class UsersService {
         secretKey: this.generateSecretKey(),
       },
     });
+
+    // Enviar código de verificação por email
+    try {
+      await this.verificationService.generateAndSendVerificationCode(
+        normalizedEmail.toLowerCase(),
+        payload.name,
+      );
+    } catch (error) {
+      console.error('Erro ao enviar email de verificação:', error);
+    }
+
     return this.toDomain(created);
   }
 

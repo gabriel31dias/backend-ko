@@ -34,14 +34,12 @@ export declare class WalletService {
         currency: string;
         averageTicketSold: number;
         refundFee: number;
-        period: {
-            from: Date;
-            to: Date;
-            totalCredits: number;
-            totalDebits: number;
-            netMovement: number;
-            salesCount: number;
-        };
+        from: Date;
+        to: Date;
+        totalCredits: number;
+        totalDebits: number;
+        netMovement: number;
+        salesCount: number;
     }>;
     private calculateAverageTicket;
     createWithdrawal(dto: CreateWithdrawalDto): Promise<{

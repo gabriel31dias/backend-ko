@@ -13,10 +13,13 @@ import { PrismaModule } from './prisma/prisma.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ApiKeysModule } from './api-keys/api-keys.module';
 import { AdminModule } from './admin/admin.module';
+import { ObjectivesModule } from './objectives/objectives.module';
+import { EmailModule } from './email/email.module';
+import { VerificationModule } from './verification/verification.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 
 @Module({
-  imports: [PrismaModule, UsersModule, AuthModule, WalletModule, PaymentLinksModule, TransactionsModule, SettingsModule, WebhooksModule, DashboardModule, ApiKeysModule, AdminModule],
+  imports: [PrismaModule, UsersModule, AuthModule, WalletModule, PaymentLinksModule, TransactionsModule, SettingsModule, WebhooksModule, DashboardModule, ApiKeysModule, AdminModule, ObjectivesModule, EmailModule, VerificationModule],
   controllers: [AppController],
   providers: [
     AppService,

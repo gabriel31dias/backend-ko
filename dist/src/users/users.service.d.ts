@@ -2,6 +2,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateFeesDto } from './dto/update-fees.dto';
 import { User } from './user.entity';
+import { VerificationService } from '../verification/verification.service';
 export interface DocumentUploadPaths {
     pfDocumentFront?: string;
     pfDocumentBack?: string;
@@ -15,7 +16,8 @@ export interface DocumentUploadPaths {
 }
 export declare class UsersService {
     private readonly prisma;
-    constructor(prisma: PrismaService);
+    private readonly verificationService;
+    constructor(prisma: PrismaService, verificationService: VerificationService);
     createUser(payload: CreateUserDto, documents?: DocumentUploadPaths): Promise<User>;
     findByEmail(email?: string): Promise<User | undefined>;
     findByCpf(cpf?: string): Promise<User | undefined>;
