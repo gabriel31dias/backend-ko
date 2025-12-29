@@ -416,6 +416,13 @@ let UsersService = class UsersService {
         }
         return rejectedDocs;
     }
+    async updatePassword(email, newPassword) {
+        const hashedPassword = await this.hashPassword(newPassword);
+        await this.prisma.user.update({
+            where: { email },
+            data: { password: hashedPassword },
+        });
+    }
 };
 exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([

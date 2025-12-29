@@ -85,5 +85,6 @@ export declare class UsersService {
         };
     }>;
     private parseRejectionNotes;
+    updatePassword(email: string, newPassword: string): Promise<void>;
 }
 //# sourceMappingURL=users.service.d.ts.map

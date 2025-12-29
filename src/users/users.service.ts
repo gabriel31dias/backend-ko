@@ -503,4 +503,13 @@ export class UsersService {
 
     return rejectedDocs;
   }
+
+  async updatePassword(email: string, newPassword: string): Promise<void> {
+    const hashedPassword = await this.hashPassword(newPassword);
+    
+    await this.prisma.user.update({
+      where: { email },
+      data: { password: hashedPassword },
+    });
+  }
 }

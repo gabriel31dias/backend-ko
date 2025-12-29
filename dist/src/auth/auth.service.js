@@ -13,10 +13,15 @@ exports.AuthService = void 0;
 const common_1 = require("@nestjs/common");
 const jwt_1 = require("@nestjs/jwt");
 const users_service_1 = require("../users/users.service");
+const prisma_service_1 = require("../prisma/prisma.service");
+const email_service_1 = require("../email/email.service");
+const crypto = require("crypto");
 let AuthService = class AuthService {
-    constructor(usersService, jwtService) {
+    constructor(usersService, jwtService, prisma, emailService) {
         this.usersService = usersService;
         this.jwtService = jwtService;
+        this.prisma = prisma;
+        this.emailService = emailService;
     }
     async login(email, password) {
         const user = await this.usersService.validateCredentials(email, password);
@@ -40,11 +45,66 @@ let AuthService = class AuthService {
             },
         };
     }
+    async requestPasswordReset(email) {
+        const user = await this.prisma.user.findUnique({
+            where: { email },
+        });
+        if (!user) {
+            throw new common_1.NotFoundException('Usuário não encontrado');
+        }
+        await this.prisma.passwordResetToken.updateMany({
+            where: {
+                email,
+                used: false,
+            },
+            data: {
+                used: true,
+            },
+        });
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 3600000);
+        await this.prisma.passwordResetToken.create({
+            data: {
+                email,
+                token,
+                expiresAt,
+            },
+        });
+        const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:3000/konnecta-dashboard'}/auth/reset-password?token=${token}`;
+        await this.emailService.sendPasswordResetEmail(email, resetLink, user.name);
+        return {
+            message: 'Link de recuperação enviado para o email',
+        };
+    }
+    async resetPassword(token, newPassword) {
+        const resetToken = await this.prisma.passwordResetToken.findUnique({
+            where: { token },
+        });
+        if (!resetToken) {
+            throw new common_1.BadRequestException('Token inválido');
+        }
+        if (resetToken.used) {
+            throw new common_1.BadRequestException('Token já foi utilizado');
+        }
+        if (resetToken.expiresAt < new Date()) {
+            throw new common_1.BadRequestException('Token expirado');
+        }
+        await this.usersService.updatePassword(resetToken.email, newPassword);
+        await this.prisma.passwordResetToken.update({
+            where: { token },
+            data: { used: true },
+        });
+        return {
+            message: 'Senha alterada com sucesso',
+        };
+    }
 };
 exports.AuthService = AuthService;
 exports.AuthService = AuthService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [users_service_1.UsersService,
-        jwt_1.JwtService])
+        jwt_1.JwtService,
+        prisma_service_1.PrismaService,
+        email_service_1.EmailService])
 ], AuthService);
 //# sourceMappingURL=auth.service.js.map
