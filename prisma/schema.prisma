@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL_SERVER")
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -238,6 +238,8 @@ model Withdrawal {
   @@index([userId])
   @@index([status])
 }
+
+
 
 model UserLevel {
   id           String   @id @default(uuid())

@@ -100,8 +100,11 @@ export class UsersService {
         normalizedEmail.toLowerCase(),
         payload.name,
       );
+      console.log(`User created successfully: ${normalizedEmail.toLowerCase()}, verification email sent`);
     } catch (error) {
       console.error('Erro ao enviar email de verificação:', error);
+      // Em produção, não falhar o cadastro se o email não for enviado
+      // O usuário pode solicitar um novo código posteriormente
     }
 
     return this.toDomain(created);

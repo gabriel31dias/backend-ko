@@ -163,6 +163,12 @@ export class UsersController {
     return { message: 'Código enviado com sucesso.' };
   }
 
+  @Get('verification-status/:email')
+  @Public()
+  async getVerificationStatus(@Param('email') email: string) {
+    return await this.verificationService.getVerificationStatus(email);
+  }
+
   private extractDocumentPaths(files: UploadedDocumentFiles): DocumentUploadPaths {
     return {
       pfDocumentFront: this.resolveFilePath(files.pfDocumentFront),
